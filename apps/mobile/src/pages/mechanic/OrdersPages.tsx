@@ -66,10 +66,20 @@ export function OrderDetailPage(): JSX.Element {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [paying, setPaying] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [rating, setRating] = useState('5');
+  const [reviewComment, setReviewComment] = useState('');
+  const [success, setSuccess] = useState<string | null>(null);
 
   const detail = useQuery({ queryKey: ['order', id], queryFn: () => api.orders.detail(id!), enabled: Boolean(id) });
   const events = useQuery({ queryKey: ['order-events', id], queryFn: () => api.orders.events(id!), enabled: Boolean(id) });
   const readiness = useQuery({ queryKey: ['payment-readiness'], queryFn: () => api.payments.readiness() });
+  const tracking = useQuery({
+    queryKey: ['order-tracking', id],
+    queryFn: () => api.orders.tracking(id!),
+    enabled: Boolean(id && detail.data && ['WAITING_FOR_COURIER', 'COURIER_ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(detail.data.status)),
+    refetchInterval: 15_000,
+  });
 
   const cancel = useMutation({
     mutationFn: () => api.orders.cancel(id!, cancelReason.trim() || 'انصراف مشتری'),
@@ -80,15 +90,44 @@ export function OrderDetailPage(): JSX.Element {
     onError: (err) => setError(err instanceof ApiClientError ? err.userMessage : 'لغو سفارش ناموفق بود'),
   });
 
+  const refund = useMutation({
+    mutationFn: () => api.payments.refund({ orderId: id!, reason: refundReason }, idempotencyKey('refund')),
+    onSuccess: () => {
+      setSuccess('درخواست بازپرداخت ثبت شد و در انتظار بررسی است.');
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['order', id] });
+    },
+    onError: (err) => setError(err instanceof ApiClientError ? err.userMessage : 'ثبت بازپرداخت ناموفق بود'),
+  });
+
+  const review = useMutation({
+    mutationFn: () =>
+      api.reviews.create({
+        orderId: id!,
+        targetType: 'seller',
+        rating: Number(rating),
+        comment: reviewComment || undefined,
+        hadIssue: Number(rating) <= 2,
+      }),
+    onSuccess: () => {
+      setSuccess('نظر شما ثبت شد. سپاسگزاریم.');
+      setError(null);
+    },
+    onError: (err) => setError(err instanceof ApiClientError ? err.userMessage : 'ثبت نظر ناموفق بود'),
+  });
+
   async function payOrder(): Promise<void> {
     setPaying(true);
     setError(null);
     try {
       await api.payments.create({ orderId: id! }, idempotencyKey('pay'));
-      // در حالت sandbox، پرداخت با تأیید سمت سرور انجام می‌شود؛ در درگاه واقعی کاربر به درگاه هدایت می‌شود
-      const provider = readiness.data;
-      if (provider?.sandbox) {
+      // وضعیت درگاه را تازه می‌خوانیم (اگر کوئری هنوز بارگذاری نشده باشد، پرداخت نیمه‌کاره می‌ماند)
+      const provider = readiness.data ?? (await api.payments.readiness());
+      if (provider.sandbox) {
+        // در حالت sandbox، پرداخت با تأیید سمت سرور انجام می‌شود؛ در درگاه واقعی کاربر به درگاه هدایت می‌شود
         await api.payments.sandboxConfirm({ orderId: id!, decision: 'paid' });
+      } else {
+        await api.payments.verify({ orderId: id! });
       }
       void queryClient.invalidateQueries({ queryKey: ['order', id] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -119,6 +158,7 @@ export function OrderDetailPage(): JSX.Element {
               </p>
             ) : null}
             {error ? <ErrorBox message={error} /> : null}
+            {success ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">{success}</div> : null}
             {canPay ? (
               <button type="button" className="cp-btn-primary w-full" disabled={paying} onClick={payOrder}>
                 {paying ? 'در حال پرداخت…' : `پرداخت ${formatToman(order.payableTotal)}`}
@@ -167,6 +207,46 @@ export function OrderDetailPage(): JSX.Element {
               ))}
             </div>
           </Section>
+
+          {tracking.data ? (
+            <Section title="رهگیری ارسال (هر ۱۵ ثانیه به‌روزرسانی)">
+              <div className="cp-card space-y-1 text-xs leading-6">
+                <p>وضعیت مأموریت: <b>{String(tracking.data.status ?? tracking.data.deliveryStatus ?? 'در حال پیگیری')}</b></p>
+                <p>مبدأ: {String((tracking.data.pickupPoint as { addressText?: string } | undefined)?.addressText ?? 'فروشگاه')}</p>
+                <p>مقصد: {String((tracking.data.dropoffPoint as { addressText?: string } | undefined)?.addressText ?? 'نشانی شما')}</p>
+                {tracking.data.estimatedMinutes ? <p>زمان تخمینی: {String(tracking.data.estimatedMinutes)} دقیقه (تضمین‌شده نیست)</p> : null}
+              </div>
+            </Section>
+          ) : null}
+
+          {['DELIVERED', 'COMPLETED'].includes(order.status) ? (
+            <Section title="نظر درباره فروشنده">
+              <div className="cp-card space-y-2">
+                <Field label="امتیاز">
+                  <select className="cp-field" value={rating} onChange={(e) => setRating(e.target.value)}>
+                    <option value="5">۵ — عالی</option><option value="4">۴ — خوب</option><option value="3">۳ — متوسط</option><option value="2">۲ — ضعیف</option><option value="1">۱ — بسیار ضعیف</option>
+                  </select>
+                </Field>
+                <Field label="توضیح (اختیاری)">
+                  <textarea className="cp-field min-h-20" value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} />
+                </Field>
+                <button type="button" className="cp-btn-primary w-full" disabled={review.isPending} onClick={() => review.mutate()}>ثبت نظر</button>
+              </div>
+            </Section>
+          ) : null}
+
+          {['DELIVERED', 'COMPLETED', 'REFUND_REQUESTED'].includes(order.status) ? (
+            <Section title="بازپرداخت / مشکل سفارش">
+              <div className="cp-card space-y-2">
+                <Field label="دلیل درخواست">
+                  <textarea className="cp-field min-h-20" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="دلیل را دقیق بنویسید…" />
+                </Field>
+                <button type="button" className="cp-btn-ghost w-full text-red-700" disabled={refund.isPending || refundReason.trim().length < 3 || order.status === 'REFUND_REQUESTED'} onClick={() => refund.mutate()}>
+                  {order.status === 'REFUND_REQUESTED' ? 'درخواست قبلاً ثبت شده است' : 'ثبت درخواست بازپرداخت'}
+                </button>
+              </div>
+            </Section>
+          ) : null}
 
           <Section title="تاریخچه وضعیت">
             <div className="cp-card space-y-3">

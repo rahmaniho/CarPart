@@ -154,6 +154,14 @@ export function RequestDetailPage(): JSX.Element {
 
   const detail = useQuery({ queryKey: ['request', id], queryFn: () => api.requests.quotes(id!), enabled: Boolean(id) });
 
+  const cancelRequest = useMutation({
+    mutationFn: () => api.requests.cancel(id!, 'انصراف مکانیک'),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['request', id] });
+      void queryClient.invalidateQueries({ queryKey: ['requests'] });
+    },
+  });
+
   const accept = useMutation({
     mutationFn: (quoteId: string) => api.requests.acceptQuote(quoteId, idempotencyKey('accept-quote')),
     onSuccess: (order) => {
@@ -185,6 +193,11 @@ export function RequestDetailPage(): JSX.Element {
           ) : (
             <p className="rounded-xl bg-slate-100 p-2 text-xs text-muted">مهلت دریافت پیشنهاد به پایان رسیده است.</p>
           )}
+          {['OPEN', 'QUOTED'].includes(request.status) ? (
+            <button type="button" className="cp-btn-ghost w-full text-red-700" disabled={cancelRequest.isPending} onClick={() => cancelRequest.mutate()}>
+              لغو درخواست
+            </button>
+          ) : null}
         </div>
       ) : null}
 

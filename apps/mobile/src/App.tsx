@@ -10,6 +10,8 @@ import MechanicHome from './pages/mechanic/MechanicHome';
 import SearchPage from './pages/mechanic/SearchPage';
 import { RequestDetailPage, RequestNewPage, RequestsPage } from './pages/mechanic/RequestsPages';
 import { OrderDetailPage, OrdersPage } from './pages/mechanic/OrdersPages';
+import CheckoutPage from './pages/mechanic/CheckoutPage';
+import SupportPage from './pages/mechanic/SupportPage';
 import NotificationsPage from './pages/mechanic/NotificationsPage';
 import ProfilePage from './pages/mechanic/ProfilePage';
 import CourierHome from './pages/courier/CourierHome';
@@ -25,9 +27,40 @@ import SellerFinance from './pages/seller/SellerFinance';
 /** نگهبان مسیر: بدون نشست → ورود؛ بدون نقش → مسیر نقش خودش */
 function homeFor(user: SessionUser | null): string {
   if (!user) return '/login';
+  if (hasRole(user, 'seller') && !hasRole(user, 'mechanic') && !hasRole(user, 'courier')) return '/seller';
+  if (hasRole(user, 'courier') && !hasRole(user, 'mechanic') && !hasRole(user, 'seller')) return '/courier';
+  if (hasRole(user, 'mechanic')) return '/mechanic';
   if (hasRole(user, 'seller')) return '/seller';
-  if (hasRole(user, 'courier') && !hasRole(user, 'mechanic')) return '/courier';
-  return '/mechanic';
+  if (hasRole(user, 'courier')) return '/courier';
+  // مدیر/اپراتور: این اپ برای نقش آن‌ها نیست — صفحه راهنما (بدون حلقه redirect)
+  return '/unsupported';
+}
+
+/** صفحه راهنما برای نقش‌هایی که اپ موبایل ندارند (مدیر/اپراتور) */
+function UnsupportedRole(): JSX.Element {
+  const navigate = useNavigate();
+  const user = useSessionStore((s) => s.user);
+  const clear = useSessionStore((s) => s.clear);
+  return (
+    <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center gap-4 bg-slate-100 p-6 text-center">
+      <div className="text-4xl">🖥</div>
+      <h1 className="text-lg font-extrabold">این اپ برای نقش شما نیست</h1>
+      <p className="text-sm leading-7 text-muted">
+        {user?.fullName ?? ''} عزیز، نقش شما در اپ موبایل پشتیبانی نمی‌شود. لطفاً از <b>پنل وب کارپارت</b> استفاده کنید.
+      </p>
+      <button
+        type="button"
+        className="cp-btn-ghost text-red-700"
+        onClick={async () => {
+          await api.auth.logout().catch(() => undefined);
+          clear();
+          navigate('/login', { replace: true });
+        }}
+      >
+        خروج و ورود با حساب دیگر
+      </button>
+    </div>
+  );
 }
 
 function RequireRole({ role, children }: { role: 'mechanic' | 'courier' | 'seller'; children: ReactNode }): JSX.Element {
@@ -103,6 +136,8 @@ export default function App(): JSX.Element {
       <Route path="/mechanic/requests" element={<RequireRole role="mechanic"><RequestsPage /></RequireRole>} />
       <Route path="/mechanic/requests/new" element={<RequireRole role="mechanic"><RequestNewPage /></RequireRole>} />
       <Route path="/mechanic/requests/:id" element={<RequireRole role="mechanic"><RequestDetailPage /></RequireRole>} />
+      <Route path="/mechanic/checkout" element={<RequireRole role="mechanic"><CheckoutPage /></RequireRole>} />
+      <Route path="/mechanic/support" element={<RequireRole role="mechanic"><SupportPage /></RequireRole>} />
       <Route path="/mechanic/orders" element={<RequireRole role="mechanic"><OrdersPage /></RequireRole>} />
       <Route path="/mechanic/orders/:id" element={<RequireRole role="mechanic"><OrderDetailPage /></RequireRole>} />
       <Route path="/mechanic/notifications" element={<RequireRole role="mechanic"><NotificationsPage /></RequireRole>} />
@@ -120,6 +155,7 @@ export default function App(): JSX.Element {
       <Route path="/seller/finance" element={<RequireRole role="seller"><SellerFinance /></RequireRole>} />
       <Route path="/seller/profile" element={<RequireRole role="seller"><SellerProfile /></RequireRole>} />
 
+      <Route path="/unsupported" element={user ? <UnsupportedRole /> : <Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to={homeFor(user)} replace />} />
     </Routes>
   );

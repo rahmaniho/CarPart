@@ -11,6 +11,21 @@ const queryClient = new QueryClient({
   },
 });
 
+// نمایش خطاهای جاوااسکریپت به‌جای صفحه سفید/بسته شدن — برای ریشه‌یابی
+function showErrorOverlay(message: string): void {
+  try {
+    const box = document.createElement('div');
+    box.style.cssText =
+      'position:fixed;inset:0;z-index:99999;background:#0f172a;color:#fecaca;padding:24px;overflow:auto;font-family:Vazirmatn,Tahoma,sans-serif;font-size:13px;line-height:2;direction:rtl;white-space:pre-wrap';
+    box.textContent = 'خطای برنامه (لطفاً این متن را برای پشتیبانی بفرستید):\n\n' + message;
+    document.body.appendChild(box);
+  } catch {
+    /* نادیده */
+  }
+}
+window.addEventListener('error', (event) => showErrorOverlay(String(event.error?.stack ?? event.message)));
+window.addEventListener('unhandledrejection', (event) => showErrorOverlay(String((event.reason as Error)?.stack ?? event.reason)));
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

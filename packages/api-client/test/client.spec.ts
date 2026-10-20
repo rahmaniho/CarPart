@@ -128,4 +128,44 @@ describe('کلاینت API — هسته HTTP', () => {
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>)['Idempotency-Key']).toBe('idem-9');
   });
+
+  it('کلاینت نیتیو هدر پلتفرم می‌فرستد و refreshToken چرخیده را ذخیره می‌کند', async () => {
+    const tokens = new MemoryTokenStore();
+    tokens.setAccess('expired');
+    tokens.setRefresh('native-refresh-old');
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes('/auth/refresh')) {
+        expect(JSON.parse(String(init?.body))).toEqual({ refreshToken: 'native-refresh-old' });
+        return jsonResponse(200, { accessToken: 'fresh-access', refreshToken: 'native-refresh-new' });
+      }
+      if (tokens.getAccess() === 'expired') return jsonResponse(401, { code: 'TOKEN_EXPIRED', message: 'expired' });
+      return jsonResponse(200, { items: [], meta: { page: 1 } });
+    });
+    const api = createApiClient({ baseUrl: 'https://api.test/api/v1', tokens, clientPlatform: 'android', fetchImpl: fetchImpl as unknown as typeof fetch });
+    await api.orders.list();
+    expect(tokens.getRefresh()).toBe('native-refresh-new');
+    const [, firstInit] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect((firstInit.headers as Record<string, string>)['X-Client-Platform']).toBe('android');
+  });
+
+  it('تیکت پشتیبانی به مسیر واقعی /tickets می‌رود و category پیش‌فرض دارد', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(201, { id: 't1', subject: 'مشکل سفارش' }));
+    const api = createApiClient({ baseUrl: 'https://api.test/api/v1', tokens: new MemoryTokenStore(), fetchImpl: fetchImpl as unknown as typeof fetch });
+    await api.support.openTicket({ subject: 'مشکل سفارش', body: 'شرح کامل مشکل سفارش من' });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('/api/v1/tickets');
+    expect(url).not.toContain('/support/tickets');
+    expect(JSON.parse(String(init.body)).category).toBe('general');
+  });
+
+  it('پیشنهاد قیمت دستی nameFa می‌فرستد و UUID خالی ارسال نمی‌کند', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse(201, { id: 'q1', status: 'SUBMITTED' }));
+    const api = createApiClient({ baseUrl: 'https://api.test/api/v1', tokens: new MemoryTokenStore(), fetchImpl: fetchImpl as unknown as typeof fetch });
+    await api.sellers.submitQuote('r1', { items: [{ nameFa: 'لنت ترمز', quantity: 1, unitPrice: 500000 }], preparationMinutes: 30 });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(body.items[0].nameFa).toBe('لنت ترمز');
+    expect(body.items[0].sellerProductId).toBeUndefined();
+  });
+
 });

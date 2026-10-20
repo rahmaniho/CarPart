@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, apiTokens } from '../../lib/api';
+import { api, clearAuthSession } from '../../lib/api';
 import { useSessionStore } from '../../lib/session';
 import { AppShell } from '../../components/AppShell';
 import { ErrorBox, Field, Section, Spinner } from '../../components/ui';
@@ -12,7 +12,6 @@ export default function CourierProfilePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useSessionStore((s) => s.user);
-  const clearSession = useSessionStore((s) => s.clear);
   const profile = useQuery({ queryKey: ['courier-me'], queryFn: () => api.couriers.me() });
   const [vehicleType, setVehicleType] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +65,7 @@ export default function CourierProfilePage(): JSX.Element {
         className="cp-btn-ghost w-full text-red-700"
         onClick={async () => {
           await api.auth.logout().catch(() => undefined);
-          apiTokens.setAccess(null);
-          clearSession();
+          clearAuthSession();
           navigate('/login', { replace: true });
         }}
       >

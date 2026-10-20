@@ -13,6 +13,7 @@ import {
   type WorkshopsApi,
 } from './api/logistics';
 import { sellersApi, type SellersApi } from './api/sellers';
+import { reviewsApi, type ReviewsApi } from './api/reviews';
 import {
   adminApi,
   auditApi,
@@ -32,6 +33,7 @@ export interface ApiClientOptions {
   tokens?: TokenStore;
   fetchImpl?: typeof fetch;
   onSessionExpired?: () => void;
+  clientPlatform?: 'web' | 'android' | 'ios';
 }
 
 /**
@@ -53,6 +55,7 @@ export class ApiClient {
   readonly workshops: WorkshopsApi;
   readonly couriers: CouriersApi;
   readonly sellers: SellersApi;
+  readonly reviews: ReviewsApi;
   readonly delivery: DeliveryApi;
   readonly notifications: NotificationsApi;
   readonly admin: AdminApi;
@@ -67,6 +70,7 @@ export class ApiClient {
       tokens: options.tokens ?? new LocalStorageTokenStore(),
       fetchImpl: options.fetchImpl,
       onSessionExpired: options.onSessionExpired,
+      clientPlatform: options.clientPlatform,
     };
     this.http = new Http(httpOptions);
     this.auth = authApi(this.http);
@@ -77,6 +81,7 @@ export class ApiClient {
     this.workshops = workshopsApi(this.http);
     this.couriers = couriersApi(this.http);
     this.sellers = sellersApi(this.http);
+    this.reviews = reviewsApi(this.http);
     this.delivery = deliveryApi(this.http);
     this.notifications = notificationsApi(this.http);
     this.admin = adminApi(this.http);

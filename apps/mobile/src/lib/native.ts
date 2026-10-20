@@ -172,3 +172,54 @@ export async function getCurrentPosition(): Promise<PositionResult> {
     );
   });
 }
+
+/**
+ * مشاهده موقعیت تا زمانی که callback توقف فراخوانی شود.
+ * فقط در حالی فعال است که اپ باز/فعال باشد؛ برای ردیابی پس‌زمینه واقعی باید
+ * افزونه Foreground Service جداگانه اضافه شود (به‌خاطر محدودیت باتری/حریم خصوصی).
+ */
+export async function watchPosition(
+  onPosition: (position: PositionResult) => void,
+  onError?: (message: string) => void,
+): Promise<() => void> {
+  if (hasPlugin('Geolocation')) {
+    try {
+      const id = await Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: 15_000, minimumUpdateInterval: 15_000 },
+        (position, error) => {
+          if (error) {
+            onError?.('دریافت موقعیت زنده ممکن نشد.');
+            return;
+          }
+          if (!position) return;
+          onPosition({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null });
+        },
+      );
+      return () => {
+        void Geolocation.clearWatch({ id }).catch(() => undefined);
+      };
+    } catch {
+      onError?.('دسترسی موقعیت زنده فعال نشد.');
+      return () => undefined;
+    }
+  }
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return () => undefined;
+  const id = navigator.geolocation.watchPosition(
+    (position) => onPosition({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null }),
+    () => onError?.('دریافت موقعیت زنده ممکن نشد.'),
+    { enableHighAccuracy: true, timeout: 15_000, maximumAge: 10_000 },
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}
+
+/** باز کردن مسیر در برنامه نقشه دستگاه */
+export function openInMaps(lat: number | null | undefined, lng: number | null | undefined, label = 'مقصد'): void {
+  if (lat == null || lng == null) return;
+  const encoded = encodeURIComponent(label);
+  try {
+    if (platformName() === 'android') window.location.href = `geo:${lat},${lng}?q=${lat},${lng}(${encoded})`;
+    else window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`, '_blank', 'noopener');
+  } catch {
+    /* نادیده */
+  }
+}

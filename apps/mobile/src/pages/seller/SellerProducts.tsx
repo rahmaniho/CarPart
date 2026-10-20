@@ -12,7 +12,7 @@ export default function SellerProducts(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<SellerProductRow | null>(null);
-  const [draft, setDraft] = useState({ partName: '', price: '', stock: '', sku: '', quality: 'aftermarket_high' });
+  const [draft, setDraft] = useState({ partId: '', price: '', stock: '', sku: '', quality: 'aftermarket_high' });
   const [editDraft, setEditDraft] = useState({ price: '', stock: '' });
 
   const products = useQuery({ queryKey: ['seller-products'], queryFn: () => api.sellers.products({ pageSize: 50 }) });
@@ -20,19 +20,18 @@ export default function SellerProducts(): JSX.Element {
 
   const create = useMutation({
     mutationFn: () => {
-      const matched = (parts.data?.items ?? []).find((part) => String((part as { nameFa?: string }).nameFa ?? '') === draft.partName);
       return api.sellers.createProduct({
+        partId: draft.partId,
         price: Number(draft.price),
         stock: Number(draft.stock),
         sku: draft.sku || undefined,
         quality: draft.quality,
-        ...(matched ? { partId: String((matched as { id: string }).id) } : { newPart: { nameFa: draft.partName } }),
       });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['seller-products'] });
       setShowCreate(false);
-      setDraft({ partName: '', price: '', stock: '', sku: '', quality: 'aftermarket_high' });
+      setDraft({ partId: '', price: '', stock: '', sku: '', quality: 'aftermarket_high' });
       setError(null);
     },
     onError: (err) => setError(err instanceof ApiClientError ? err.userMessage : 'ثبت محصول ناموفق بود (حساب باید تأیید شده باشد)'),
@@ -72,8 +71,11 @@ export default function SellerProducts(): JSX.Element {
 
       {showCreate ? (
         <div className="cp-card space-y-2">
-          <Field label="نام قطعه (از کاتالوگ یا جدید)">
-            <input className="cp-field" value={draft.partName} onChange={(e) => setDraft({ ...draft, partName: e.target.value })} placeholder="مثلاً لنت ترمز جلو پراید" />
+          <Field label="قطعه از کاتالوگ">
+            <select className="cp-field" value={draft.partId} onChange={(e) => setDraft({ ...draft, partId: e.target.value })}>
+              <option value="">— انتخاب قطعه —</option>
+              {(parts.data?.items ?? []).map((part) => <option key={String(part.id)} value={String(part.id)}>{String(part.nameFa ?? 'قطعه')}</option>)}
+            </select>
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="قیمت (تومان)">
@@ -86,7 +88,7 @@ export default function SellerProducts(): JSX.Element {
           <button
             type="button"
             className="cp-btn-primary w-full"
-            disabled={create.isPending || !draft.partName || !draft.price || !draft.stock}
+            disabled={create.isPending || !draft.partId || !draft.price || !draft.stock}
             onClick={() => create.mutate()}
           >
             ثبت محصول

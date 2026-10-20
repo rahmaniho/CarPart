@@ -16,7 +16,11 @@ vi.mock('../src/lib/api', () => ({
       login: (...args: unknown[]) => login(...args),
     },
   },
-  apiTokens: { getAccess: () => null, setAccess: vi.fn() },
+  apiTokens: { getAccess: () => null, setAccess: vi.fn(), setRefresh: vi.fn() },
+  currentApiBaseUrl: () => '/api/v1',
+  needsApiConfiguration: () => false,
+  configureApiBaseUrl: vi.fn(),
+  persistAuthSession: (session: { user: unknown }) => useSessionStore.getState().set(session.user as never),
 }));
 
 function renderLogin(): void {
@@ -26,6 +30,7 @@ function renderLogin(): void {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/mechanic" element={<p>صفحه مکانیک</p>} />
         <Route path="/courier" element={<p>صفحه پیک</p>} />
+        <Route path="/seller" element={<p>صفحه فروشنده</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -104,4 +109,20 @@ describe('جریان ورود', () => {
 
     await waitFor(() => expect(screen.getByText('صفحه پیک')).toBeTruthy());
   });
+
+  it('فروشنده به پنل تأمین‌کننده هدایت می‌شود', async () => {
+    requestOtp.mockResolvedValue({ sent: true, expiresIn: 120, simulated: true });
+    verifyOtp.mockResolvedValue({
+      user: { id: 'u3', mobile: '09122220001', fullName: 'فروشنده نمونه', roles: ['seller'], permissions: [], isActive: true, city: 'تهران', email: null },
+      accessToken: 'tok', refreshToken: 'ref', accessExpiresIn: 900, requiresMobileVerification: false,
+    });
+    renderLogin();
+    fireEvent.change(screen.getByPlaceholderText('09xxxxxxxxx'), { target: { value: '09122220001' } });
+    fireEvent.click(screen.getByText('دریافت کد تأیید'));
+    await waitFor(() => expect(screen.getByText('تأیید و ورود')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('کد تأیید'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByText('تأیید و ورود'));
+    await waitFor(() => expect(screen.getByText('صفحه فروشنده')).toBeTruthy());
+  });
+
 });

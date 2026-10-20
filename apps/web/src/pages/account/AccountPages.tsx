@@ -151,7 +151,9 @@ export function AccountOrderDetailPage(): JSX.Element {
     setError(null);
     try {
       await api.payments.create({ orderId: id! }, `web-pay-${Date.now()}`);
-      if (readiness.data?.sandbox) await api.payments.sandboxConfirm({ orderId: id!, decision: 'paid' });
+      const provider = readiness.data ?? (await api.payments.readiness());
+      if (provider.sandbox) await api.payments.sandboxConfirm({ orderId: id!, decision: 'paid' });
+      else await api.payments.verify({ orderId: id! });
       void queryClient.invalidateQueries({ queryKey: ['order', id] });
     } catch (err) {
       setError(err instanceof ApiClientError ? err.userMessage : 'پرداخت ناموفق بود');

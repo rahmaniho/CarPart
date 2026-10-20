@@ -30,7 +30,7 @@ export function AdminLayout({ children }: { children: ReactNode }): JSX.Element 
             <span className="text-[11px] text-muted">پنل مدیریت</span>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {NAV.map((item) => (
             <NavLink
               key={item.to}

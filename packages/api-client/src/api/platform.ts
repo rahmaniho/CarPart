@@ -68,7 +68,7 @@ export interface FinanceApi {
 
 export interface SupportApi {
   myTickets(query?: { page?: number; pageSize?: number }): Promise<PageResult<TicketRow>>;
-  openTicket(input: { subject: string; body: string; orderId?: string; priority?: string }): Promise<TicketRow>;
+  openTicket(input: { subject: string; body: string; category?: 'general' | 'order' | 'payment' | 'delivery' | 'part_mismatch' | 'seller' | 'courier' | 'technical'; orderId?: string; priority?: string }): Promise<TicketRow>;
   ticketMessages(id: string): Promise<Array<Record<string, unknown>>>;
   replyTicket(id: string, body: string): Promise<Record<string, unknown>>;
 }
@@ -138,9 +138,12 @@ export function financeApi(http: Http): FinanceApi {
 
 export function supportApi(http: Http): SupportApi {
   return {
-    myTickets: (query = {}) => http.get<PageResult<TicketRow>>('/support/tickets', { query }),
-    openTicket: (input) => http.post<TicketRow>('/support/tickets', input),
-    ticketMessages: (id) => http.get<Array<Record<string, unknown>>>(`/support/tickets/${id}/messages`),
-    replyTicket: (id, body) => http.post<Record<string, unknown>>(`/support/tickets/${id}/messages`, { body }),
+    myTickets: (query = {}) => http.get<PageResult<TicketRow>>('/tickets', { query }),
+    openTicket: (input) => http.post<TicketRow>('/tickets', { category: 'general', ...input }),
+    ticketMessages: async (id) => {
+      const ticket = await http.get<Record<string, unknown>>(`/tickets/${id}`);
+      return (ticket.replies as Array<Record<string, unknown>> | undefined) ?? [];
+    },
+    replyTicket: (id, body) => http.post<Record<string, unknown>>(`/tickets/${id}/replies`, { body }),
   };
 }

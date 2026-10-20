@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError } from '@carpart/api-client';
 import { api } from '../../lib/api';
+import { openInMaps } from '../../lib/native';
 import { dateFa, formatToman, toFaDigits } from '../../lib/format';
 import { AppShell } from '../../components/AppShell';
 import { ErrorBox, Field, Section, Spinner, StatusChip } from '../../components/ui';
@@ -61,6 +62,9 @@ export default function MissionDetailPage(): JSX.Element {
                 {/* اطلاعات تماس مشتری عمداً محدود است؛ فقط اپراتور/مالک به شماره کامل دسترسی دارد */}
                 <p className="text-xs text-muted">گیرنده: {String(mission.dropoffPoint?.receiverName ?? 'مشتری')} (شماره تماس مخفی است)</p>
               </div>
+              <button type="button" className="cp-btn-ghost w-full" disabled={mission.dropoffPoint?.lat == null || mission.dropoffPoint?.lng == null} onClick={() => openInMaps(Number(mission.dropoffPoint?.lat), Number(mission.dropoffPoint?.lng), 'مقصد تحویل')}>
+                🗺 باز کردن مسیر در نقشه
+              </button>
             </div>
             <p className="text-[11px] text-muted">
               مسافت: {mission.distanceKm ? `${toFaDigits(mission.distanceKm.toFixed(1))} کیلومتر` : 'تخمینی'} · ثبت {dateFa(mission.createdAt)}

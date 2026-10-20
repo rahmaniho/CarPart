@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError } from '@carpart/api-client';
-import { api, apiTokens } from '../../lib/api';
+import { api, clearAuthSession } from '../../lib/api';
 import { useSessionStore } from '../../lib/session';
 import { compactMoney, toFaDigits } from '../../lib/format';
 import { ErrorBox, Section, Spinner, StatCard } from '../../components/ui';
@@ -12,7 +12,6 @@ import { SellerShell } from './SellerShell';
 export default function SellerHome(): JSX.Element {
   const navigate = useNavigate();
   const user = useSessionStore((s) => s.user);
-  const clear = useSessionStore((s) => s.clear);
   const dashboard = useQuery({ queryKey: ['seller-dashboard'], queryFn: () => api.sellers.dashboard() });
   const profile = useQuery({ queryKey: ['seller-me'], queryFn: () => api.sellers.me() });
   const stats = (dashboard.data ?? {}) as Record<string, number>;
@@ -43,8 +42,7 @@ export default function SellerHome(): JSX.Element {
             className="cp-btn-ghost text-red-700"
             onClick={async () => {
               await api.auth.logout().catch(() => undefined);
-              apiTokens.setAccess(null);
-              clear();
+              clearAuthSession();
               navigate('/login', { replace: true });
             }}
           >
