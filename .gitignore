@@ -18,3 +18,14 @@ apps/api/*.db
 apps/api/data/
 apps/api/uploads/
 apps/web/data/
+
+# بیلدها و خروجی‌های تولیدشده
+dist/
+apps/mobile/android/app/src/main/assets/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/app/google-services.json
+apps/mobile/data/
+*.tsbuildinfo

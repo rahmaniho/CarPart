@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
     "typecheck": "tsc -b --pretty false",
-    "lint": "eslint \"src/**/*.{ts,tsx}\""
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.64.2",
@@ -21,7 +22,9 @@
     "recharts": "^3.2.1",
     "vazirmatn": "^33.0.3",
     "zod": "^3.24.1",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "@carpart/api-client": "*",
+    "@carpart/contract": "*"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -38,6 +41,10 @@
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.7.3",
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "vitest": "^3.2.4",
+    "jsdom": "^26.0.0",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1"
   }
 }

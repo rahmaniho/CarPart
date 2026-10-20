@@ -1,0 +1,57 @@
+@import 'vazirmatn/Vazirmatn-font-face.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cp-primary: 15 118 110;
+  --cp-primary-dark: 17 94 89;
+  --cp-primary-soft: 204 251 241;
+  --cp-ink: 24 35 48;
+  --cp-muted: 100 116 139;
+  --cp-line: 226 232 240;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-100 text-ink font-sans antialiased;
+}
+
+@layer components {
+  .cp-card {
+    @apply bg-white rounded-2xl border border-line shadow-sm p-4;
+  }
+  .cp-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .cp-btn-primary {
+    @apply cp-btn bg-primary text-white hover:bg-primary-dark;
+  }
+  .cp-btn-ghost {
+    @apply cp-btn bg-slate-100 text-ink hover:bg-slate-200;
+  }
+  .cp-btn-danger {
+    @apply cp-btn bg-red-700 text-white hover:bg-red-800;
+  }
+  .cp-field {
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30;
+  }
+  .cp-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+  .cp-table {
+    @apply w-full text-sm;
+  }
+  .cp-table th {
+    @apply border-b border-line px-3 py-2 text-start text-xs font-semibold text-muted;
+  }
+  .cp-table td {
+    @apply border-b border-line px-3 py-2.5;
+  }
+}

@@ -1,0 +1,64 @@
+@import 'vazirmatn/Vazirmatn-font-face.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* توکن‌های طراحی — پالت آرام با کنتراست دسترس‌پذیر */
+  --cp-primary: 15 118 110; /* teal-700 */
+  --cp-primary-dark: 17 94 89;
+  --cp-primary-soft: 204 251 241;
+  --cp-ink: 24 35 48;
+  --cp-muted: 100 116 139;
+  --cp-surface: 255 255 255;
+  --cp-line: 226 232 240;
+  --cp-danger: 185 28 28;
+  --cp-warn: 180 83 9;
+  --cp-ok: 21 128 61;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-100 text-ink font-sans antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .cp-card {
+    @apply bg-surface rounded-2xl border border-line shadow-sm p-4;
+  }
+  .cp-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .cp-btn-primary {
+    @apply cp-btn bg-primary text-white active:bg-primary-dark;
+  }
+  .cp-btn-ghost {
+    @apply cp-btn bg-slate-100 text-ink active:bg-slate-200;
+  }
+  .cp-btn-danger {
+    @apply cp-btn bg-red-700 text-white active:bg-red-800;
+  }
+  .cp-field {
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30;
+  }
+  .cp-label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+  .cp-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+  }
+}
+
+/* امنیت: جلوگیری از بزرگ‌نمایی ناخواسته در فیلدها در iOS */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
