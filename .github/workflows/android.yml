@@ -45,7 +45,19 @@ jobs:
 
       - name: ساخت APK (مکانیک + پیک)
         working-directory: apps/mobile/android
-        run: ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug
+        run: |
+          set +e
+          ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug > /tmp/gradle.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "=== gradle tail ==="
+            tail -60 /tmp/gradle.log
+            echo "=== error annotations (for visibility) ==="
+            awk '/What went wrong/{flag=1} flag{print} /^\* Try/{if(flag) exit}' /tmp/gradle.log | head -20 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          exit $code
 
       - name: بارگذاری APKها
         uses: actions/upload-artifact@v4
