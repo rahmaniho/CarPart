@@ -1,6 +1,7 @@
 import { can, type CurrentUserDto, type Permission, type Role } from '@carpart/contract';
 import { create } from 'zustand';
 import { api, onSessionChange, refreshAccessSession, setAccessToken } from '../lib/api-client';
+import { saveNativeSessionSnapshot } from '../lib/native-bridge';
 
 export function defaultHomeForRoles(roles: readonly Role[]): string {
   if (roles.includes('admin') || roles.includes('operator')) return '/admin';
@@ -38,6 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     setSession: (user, accessToken) => {
       setAccessToken(accessToken);
+      saveNativeSessionSnapshot({ user, accessToken });
       set({ user, bootstrapped: true });
     },
 
@@ -57,6 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         // حتی اگر نشست سمت سرور پیش‌تر باطل شده باشد، وضعیت محلی پاک می‌شود
       } finally {
         setAccessToken(null);
+        saveNativeSessionSnapshot(null);
         set({ user: null });
       }
     },

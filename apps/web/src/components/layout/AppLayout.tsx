@@ -9,18 +9,21 @@ import {
   LogOut,
   Menu,
   Search,
+  Server,
   ShoppingCart,
   UserCheck,
   Wrench,
   X,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api-client';
+import { initNativeShell } from '../../lib/native-bridge';
 import type { HealthReadyResponse } from '../../lib/types';
 import { defaultHomeForRoles, useAuthStore } from '../../store/auth-store';
 import { useCartStore } from '../../store/cart-store';
 import { LoadingState, ToastViewport } from '../ui/Primitives';
+import { MobileBottomNav, OfflineStatusBanner, ServerConnectionModal } from './MobileShell';
 
 interface AnnouncementItem {
   id: string;
@@ -35,6 +38,16 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [serverModalOpen, setServerModalOpen] = useState(false);
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    void initNativeShell(setOnline).then((fn) => {
+      cleanup = fn;
+    });
+    return () => cleanup?.();
+  }, []);
 
   const healthQuery = useQuery({
     queryKey: ['health-ready'],
@@ -68,6 +81,7 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <OfflineStatusBanner online={online} />
       {/* نوار شفافیت محیط آزمایشی / اطلاعیه سراسری */}
       {(isSandboxPayment || isMockMap || topAnnouncement) && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-950">
@@ -221,6 +235,16 @@ export function AppLayout() {
 
             <button
               type="button"
+              onClick={() => setServerModalOpen(true)}
+              title="تنظیم سرور اتصال (اپلیکیشن موبایل / API)"
+              aria-label="تنظیم اتصال سرور"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-brand-700"
+            >
+              <Server className="h-4 w-4" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
               className="md:hidden rounded-lg border border-slate-200 p-2 text-slate-600"
               aria-label="منوی موبایل"
@@ -273,12 +297,12 @@ export function AppLayout() {
       </header>
 
       {/* محتوای صفحه */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 pb-20 md:pb-6">
         <Outlet />
       </main>
 
       {/* فوتر */}
-      <footer className="border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
+      <footer className="hidden md:block border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row">
           <div>
             <strong className="font-bold text-slate-800">قطعه‌رسان (CarPart)</strong> — بازار آنلاین تأمین شفاف و ارسال شهری
@@ -296,6 +320,8 @@ export function AppLayout() {
         </div>
       </footer>
 
+      <MobileBottomNav />
+      <ServerConnectionModal open={serverModalOpen} onClose={() => setServerModalOpen(false)} />
       <ToastViewport />
     </div>
   );

@@ -1,4 +1,5 @@
 import { API_PREFIX, type ApiErrorBody, type CurrentUserDto } from '@carpart/contract';
+import { getConfiguredApiOrigin, loadNativeSessionSnapshot, saveNativeSessionSnapshot } from './native-bridge';
 
 export class ApiClientError extends Error {
   readonly statusCode: number;
@@ -55,8 +56,9 @@ export function makeIdempotencyKey(prefix = 'web'): string {
 }
 
 export async function refreshAccessSession(): Promise<{ user: CurrentUserDto; accessToken: string } | null> {
+  const origin = getConfiguredApiOrigin();
   try {
-    const res = await fetch(`${API_PREFIX}/auth/refresh`, {
+    const res = await fetch(`${origin}${API_PREFIX}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -65,18 +67,46 @@ export async function refreshAccessSession(): Promise<{ user: CurrentUserDto; ac
       },
       body: JSON.stringify({}),
     });
-    if (!res.ok) {
-      inMemoryAccessToken = null;
-      sessionListener?.(null);
-      return null;
+    if (res.ok) {
+      const data = (await res.json()) as { user: CurrentUserDto; accessToken: string };
+      inMemoryAccessToken = data.accessToken;
+      saveNativeSessionSnapshot(data);
+      sessionListener?.(data);
+      return data;
     }
-    const data = (await res.json()) as { user: CurrentUserDto; accessToken: string };
-    inMemoryAccessToken = data.accessToken;
-    sessionListener?.(data);
-    return data;
   } catch {
-    return null;
+    // ادامه برای بازیابی نشست بومی موبایل
   }
+
+  const savedNative = loadNativeSessionSnapshot<CurrentUserDto>();
+  if (savedNative?.accessToken) {
+    try {
+      const meRes = await fetch(`${origin}${API_PREFIX}/auth/me`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${savedNative.accessToken}`,
+        },
+      });
+      if (meRes.ok) {
+        const me = (await meRes.json()) as CurrentUserDto;
+        inMemoryAccessToken = savedNative.accessToken;
+        const payload = { user: me, accessToken: savedNative.accessToken };
+        saveNativeSessionSnapshot(payload);
+        sessionListener?.(payload);
+        return payload;
+      }
+      saveNativeSessionSnapshot(null);
+    } catch {
+      // در صورت قطعی موقت شبکه موبایل، تصویر آخرین نشست معتبر حفظ می‌شود
+      inMemoryAccessToken = savedNative.accessToken;
+      sessionListener?.(savedNative);
+      return savedNative;
+    }
+  }
+
+  inMemoryAccessToken = null;
+  sessionListener?.(null);
+  return null;
 }
 
 async function singleFlightRefresh(): Promise<string | null> {
@@ -101,11 +131,13 @@ export interface RequestOptions {
 }
 
 function buildUrl(path: string, query?: RequestOptions['query'], rawUrl = false): string {
-  const normalized = rawUrl
+  const origin = getConfiguredApiOrigin();
+  const basePath = rawUrl
     ? path
     : path.startsWith('/api/')
       ? path
       : `${API_PREFIX}/${path.replace(/^\/+/, '')}`;
+  const normalized = basePath.startsWith('http') ? basePath : `${origin}${basePath}`;
   if (!query) return normalized;
   const params = new URLSearchParams();
   for (const [key, val] of Object.entries(query)) {

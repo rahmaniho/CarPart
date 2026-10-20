@@ -109,4 +109,5 @@ python3 scripts/smoke_e2e.py  # آزمون زنده چرخه کامل سفارش
 - [`docs/SECURITY.md`](docs/SECURITY.md) — مدل امنیتی JWT چرخشی، RBAC، رمزنگاری شبا (AES-256-GCM) و حسابرسی
 - [`docs/TESTING.md`](docs/TESTING.md) — راهبرد آزمون‌های واحد، یکپارچه، فرانت‌اند و آزمون دود سرتاسری
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — راهنمای استقرار با Docker Compose، PostgreSQL، Nginx و متغیرهای تولیدی
+- [`docs/ANDROID.md`](docs/ANDROID.md) — معماری اپلیکیشن اندروید (Capacitor Gradle + React Native/Expo) و نحوه نصب و ساخت APK
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — محدودیت‌های شفاف فعلی و نقشه راه توسعه فازهای آتی

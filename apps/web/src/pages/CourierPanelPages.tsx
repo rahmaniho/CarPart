@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import { PanelShell } from '../components/layout/AppLayout';
 import { EmptyState, ErrorAlert, LoadingState, StatCard, StatusBadge, StatusFromMap } from '../components/ui/Primitives';
 import { api } from '../lib/api-client';
+import { getDeviceCoordinates } from '../lib/native-bridge';
 import type { DeliveryMissionDto, PayoutItemDto } from '../lib/types';
 import { useToastStore } from '../store/toast-store';
 
@@ -70,14 +71,15 @@ export function CourierDashboardPage() {
   };
 
   const handleSendSampleLocation = async () => {
+    const coords = await getDeviceCoordinates();
     await api.post('couriers/me/location', {
-      lat: 35.732,
-      lng: 51.398,
+      lat: coords.lat,
+      lng: coords.lng,
       deliveryId: dashQuery.data?.activeMission?.id,
     });
     pushToast({
       tone: 'success',
-      title: 'موقعیت مکانی به‌روزرسانی شد',
+      title: coords.source === 'gps' ? 'موقعیت واقعی GPS گوشی ثبت شد' : 'موقعیت مکانی به‌روزرسانی شد',
       detail: 'طبق سیاست حریم خصوصی، سابقه مسیر فقط در حین مأموریت فعال نگهداری می‌شود.',
     });
   };

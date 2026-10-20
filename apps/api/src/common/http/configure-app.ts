@@ -58,7 +58,9 @@ export function configureApp(app: INestApplication, config: AppConfig, options: 
         }
         if (
           !config.app.isProduction &&
-          (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) || /^https:\/\/[a-z0-9-]+\.e2b\.app$/i.test(origin))
+          (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) ||
+            /^(capacitor|ionic):\/\/localhost$/i.test(origin) ||
+            /^https:\/\/[a-z0-9-]+\.e2b\.app$/i.test(origin))
         ) {
           callback(null, true);
           return;

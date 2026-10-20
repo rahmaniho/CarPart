@@ -89,11 +89,13 @@ for (const file of controllerFiles) {
   }
 }
 
-// ۲. بررسی تمام فراخوانی‌های api.* در apps/web/src
-const webFiles = walk(
-  path.join(rootDir, 'apps/web/src'),
-  (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.includes('/test/'),
-);
+// ۲. بررسی تمام فراخوانی‌های api.* در apps/web/src و apps/mobile
+const clientFiles = [
+  ...walk(path.join(rootDir, 'apps/web/src'), (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.includes('/test/')),
+  ...(fs.existsSync(path.join(rootDir, 'apps/mobile'))
+    ? walk(path.join(rootDir, 'apps/mobile'), (f) => (f.endsWith('.ts') || f.endsWith('.tsx')) && !f.includes('node_modules'))
+    : []),
+];
 
 const verbMap = {
   get: 'GET',
@@ -108,7 +110,7 @@ const mismatches = [];
 const localhostViolations = [];
 let checkedCalls = 0;
 
-for (const file of webFiles) {
+for (const file of clientFiles) {
   const src = fs.readFileSync(file, 'utf8');
   const rel = path.relative(rootDir, file);
 

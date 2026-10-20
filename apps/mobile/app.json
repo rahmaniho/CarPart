@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "قطعه‌رسان",
+    "slug": "carpart",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "carpart",
+    "userInterfaceStyle": "light",
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
+    "android": {
+      "package": "ir.carpart.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0F766E"
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "usesCleartextTraffic": true
+    }
+  }
+}

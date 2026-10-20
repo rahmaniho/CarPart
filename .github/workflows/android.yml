@@ -1,0 +1,87 @@
+name: ساخت اپلیکیشن اندروید قطعه‌رسان (APK)
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: کامپایل و امضای بسته نصبی اندروید (Signed APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: دریافت کد منبع
+        uses: actions/checkout@v4
+
+      - name: راه‌اندازی Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: راه‌اندازی Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: پذیرش مجوزهای Android SDK برای دانلود خودکار SDK 36
+        run: |
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: نصب وابستگی‌ها و همگام‌سازی Capacitor Android
+        run: |
+          npm ci
+          npm run build -w @carpart/contract
+          npm run android:sync
+
+      - name: آماده‌سازی کلید امضای دیجیتال APK
+        env:
+          SECRET_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p /tmp/keystore
+          if [ -n "$SECRET_KEYSTORE_B64" ]; then
+            echo "$SECRET_KEYSTORE_B64" | base64 -d > /tmp/keystore/release.keystore
+          else
+            keytool -genkeypair -v \
+              -keystore /tmp/keystore/release.keystore \
+              -alias carpart \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass CarPartRelease2026! \
+              -keypass CarPartRelease2026! \
+              -dname "CN=CarPart Platform, OU=Mobile Engineering, O=CarPart, L=Tehran, ST=Tehran, C=IR"
+          fi
+
+      - name: ساخت نسخه نهایی امضاشده (assembleRelease) با Gradle
+        working-directory: apps/web/android
+        env:
+          ANDROID_KEYSTORE_PATH: /tmp/keystore/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'CarPartRelease2026!' }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'carpart' }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'CarPartRelease2026!' }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: بررسی امضای دیجیتال APK (V1/V2/V3 Signature Verification)
+        run: |
+          mkdir -p dist-apk
+          cp apps/web/android/app/build/outputs/apk/release/app-release.apk dist-apk/carpart-v0.1.0-release.apk
+          APKSIGNER=$(ls -1 "${ANDROID_HOME}"/build-tools/*/apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" verify --verbose dist-apk/carpart-v0.1.0-release.apk
+          ls -lh dist-apk/carpart-v0.1.0-release.apk
+
+      - name: بارگذاری فایل نصبی APK در خروجی بیلد
+        uses: actions/upload-artifact@v4
+        with:
+          name: carpart-android-apk
+          path: dist-apk/carpart-v0.1.0-release.apk
+          if-no-files-found: error
+          retention-days: 30

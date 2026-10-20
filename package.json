@@ -13,6 +13,8 @@
     "dev": "concurrently -n API,WEB -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "npm run dev -w @carpart/api",
     "dev:web": "npm run dev -w @carpart/web",
+    "android:sync": "npm run build -w @carpart/web && npm run cap:sync -w @carpart/web",
+    "android:apk": "npm run android:sync && cd apps/web/android && ./gradlew assembleRelease",
     "build": "npm run build -w @carpart/contract && npm run build -w @carpart/api && npm run build -w @carpart/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
