@@ -12,6 +12,7 @@ import {
   type NotificationsApi,
   type WorkshopsApi,
 } from './api/logistics';
+import { sellersApi, type SellersApi } from './api/sellers';
 import {
   adminApi,
   auditApi,
@@ -51,6 +52,7 @@ export class ApiClient {
   readonly payments: PaymentsApi;
   readonly workshops: WorkshopsApi;
   readonly couriers: CouriersApi;
+  readonly sellers: SellersApi;
   readonly delivery: DeliveryApi;
   readonly notifications: NotificationsApi;
   readonly admin: AdminApi;
@@ -74,6 +76,7 @@ export class ApiClient {
     this.payments = paymentsApi(this.http);
     this.workshops = workshopsApi(this.http);
     this.couriers = couriersApi(this.http);
+    this.sellers = sellersApi(this.http);
     this.delivery = deliveryApi(this.http);
     this.notifications = notificationsApi(this.http);
     this.admin = adminApi(this.http);
