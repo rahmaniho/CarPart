@@ -2,6 +2,15 @@
 
 تمام تغییرات مهم محصول در این فایل ثبت می‌شوند. نسخه‌بندی بر اساس Semantic Versioning است.
 
+## [1.3.0] — ۱۴۰۵/۰۷/۲۹
+
+### لندینگ و انتشار
+- لندینگ معرفی کامل و واکنش‌گرا با Hero تبلیغاتی، راهکارهای سه نقش، امکانات، مراحل کار، دانلود Android، FAQ و CTA
+- استفاده از لوگوهای رسمی و بهینه‌شده در تصاویر معرفی و متادیتای اشتراک‌گذاری
+- SEO فارسی، Open Graph، favicon و ساختار معنایی/دسترس‌پذیر
+- Lazy loading تمام Routeهای وب؛ جداسازی نمودارها و پنل‌ها از Bundle اولیهٔ لندینگ
+- اصلاح قطعی نگاشت لوگوی فروشنده و پیک در Android، Splash و PWA
+
 ## [1.2.1] — ۱۴۰۵/۰۷/۲۹
 
 ### هویت بصری نقش‌ها
@@ -62,6 +71,7 @@
 - قرارداد و API client مشترک TypeScript
 - Docker، CI، تست‌ها و مستندات استقرار/امنیت
 
+[1.3.0]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.3.0
 [1.2.1]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.2.1
 [1.2.0]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.2.0
 [1.1.0]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.1.0

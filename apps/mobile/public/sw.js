@@ -1,5 +1,5 @@
 /* کش امن PWA: اسناد HTML همیشه network-first تا به chunk قدیمی اشاره نکنند؛ API هرگز کش نمی‌شود. */
-const CACHE = 'carpart-mobile-v1.2.1';
+const CACHE = 'carpart-mobile-v1.3.0';
 const FALLBACK_ASSETS = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

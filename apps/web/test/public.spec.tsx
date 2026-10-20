@@ -46,6 +46,11 @@ describe('صفحات عمومی', () => {
     expect(screen.getByText(/قطعه‌ای که لازم دارید/)).toBeTruthy();
     expect(screen.getByLabelText('جست‌وجوی قطعه')).toBeTruthy();
     expect(screen.getAllByText('کارپارت').length).toBeGreaterThan(0);
+    expect(screen.getByText('برای مکانیک و خریدار')).toBeTruthy();
+    expect(screen.getByText('برای فروشنده و تأمین‌کننده')).toBeTruthy();
+    expect(screen.getByText('برای پیک')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'لوگوی برای فروشنده و تأمین‌کننده کارپارت' }).getAttribute('src')).toBe('/branding/seller.webp');
+    expect(screen.getByRole('link', { name: /دریافت نسخه Android/ }).getAttribute('href')).toBe('https://github.com/rahmaniho/CarPart/releases/latest');
   });
 
   it('کارت پیشنهاد قیمت، هشدار و رتبه‌بندی شفاف را نشان می‌دهد', () => {
