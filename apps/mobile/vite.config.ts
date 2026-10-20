@@ -10,5 +10,21 @@ export default defineConfig({
     allowedHosts: true,
     proxy: { '/api': 'http://localhost:4000' },
   },
-  build: { outDir: 'dist', sourcemap: false },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    target: 'es2022',
+    cssCodeSplit: true,
+    modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@tanstack/react-query')) return 'vendor-query';
+          if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
+          if (id.includes('@capacitor')) return 'vendor-native';
+          return undefined;
+        },
+      },
+    },
+  },
 });

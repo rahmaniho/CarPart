@@ -1,4 +1,4 @@
-# ساخت APKهای اندروید (سه Flavor) در CI — چون ساخت محلی نیازمند Android SDK است
+# ساخت APKهای اندروید (چهار Flavor) در CI — چون ساخت محلی نیازمند Android SDK است
 name: Android
 
 permissions:
@@ -46,11 +46,11 @@ jobs:
         working-directory: apps/mobile/android
         run: yes | sdkmanager --licenses > /dev/null || true
 
-      - name: ساخت APK (مکانیک + پیک)
+      - name: ساخت چهار APK نقش‌محور
         working-directory: apps/mobile/android
         run: |
           set +e
-          ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug > /tmp/gradle.log 2>&1
+          ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug assembleSellerDebug assembleAdminDebug > /tmp/gradle.log 2>&1
           code=$?
           if [ $code -ne 0 ]; then
             echo "=== gradle tail ==="
@@ -70,20 +70,22 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
             apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
             apps/mobile/android/app/build/outputs/apk/seller/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/admin/debug/*.apk
           if-no-files-found: error
 
-      # پس از ادغام در main، APKها روی Release «android-v1.1.0» منتشر می‌شوند
+      # پس از ادغام در main، APKها روی Release «android-v1.2.0» منتشر می‌شوند
       - name: انتشار APK در GitHub Release (فقط main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-v1.1.0
-          name: اپلیکیشن‌های اندروید کارپارت — مکانیک، پیک، تأمین‌کننده
+          tag_name: android-v1.2.0
+          name: اپلیکیشن‌های اندروید کارپارت — مکانیک، پیک، فروشنده و مدیریت
           files: |
             apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
             apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
             apps/mobile/android/app/build/outputs/apk/seller/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/admin/debug/*.apk
           fail_on_unmatched_files: true
           body: |
-            APKهای سه Flavor (مکانیک و پیک) ساخته‌شده با GitHub Actions (JDK 21 + Android SDK).
+            APKهای چهار Flavor (مکانیک، پیک، فروشنده و مدیریت) ساخته‌شده با GitHub Actions (JDK 21 + Android SDK).
             امضا با کلید debug است؛ برای انتشار در کافه‌بازار با keystore خود امضا بزنید (ANDROID.md).

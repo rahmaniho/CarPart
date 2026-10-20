@@ -15,9 +15,9 @@ export class DeviceToken extends BaseEntity {
   @Column({ type: 'varchar', length: 24 })
   platform!: 'android' | 'ios' | 'web';
 
-  /** طعم اپ (مکانیک/پیک) — برای انتخاب قالب اعلان */
+  /** طعم اپ نقش‌محور — برای انتخاب قالب اعلان */
   @Column({ type: 'varchar', length: 24, nullable: true })
-  appFlavor: 'mechanic' | 'courier' | 'web' | null = null;
+  appFlavor: 'mechanic' | 'courier' | 'seller' | 'admin' | 'web' | null = null;
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;

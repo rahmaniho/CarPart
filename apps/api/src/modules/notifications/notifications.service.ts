@@ -155,7 +155,7 @@ export class NotificationsService {
 
   async registerDeviceToken(
     userId: string,
-    input: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'web' | null },
+    input: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'seller' | 'admin' | 'web' | null },
   ): Promise<DeviceToken> {
     const existing = await this.deviceTokens.findOne({ where: { token: input.token } });
     const now = new Date();

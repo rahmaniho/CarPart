@@ -6,6 +6,7 @@ import { api, clearAuthSession } from '../../lib/api';
 import { useSessionStore } from '../../lib/session';
 import { compactMoney, toFaDigits } from '../../lib/format';
 import { ErrorBox, Section, Spinner, StatCard } from '../../components/ui';
+import { RoleHero } from '../../components/RoleHero';
 import { SellerShell } from './SellerShell';
 
 /** داشبورد فروشنده — داده واقعی از پایگاه‌داده */
@@ -18,6 +19,14 @@ export default function SellerHome(): JSX.Element {
 
   return (
     <SellerShell title={`فروشگاه ${user?.fullName ?? ''}`}>
+      <RoleHero
+        variant="seller"
+        eyebrow="مرکز فروش حرفه‌ای"
+        title="فروش را هوشمند مدیریت کنید"
+        description="موجودی، سفارش‌ها، استعلام‌ها و تسویه‌ها؛ همه در یک نمای سریع و شفاف."
+        metric={dashboard.isLoading ? 'در حال همگام‌سازی…' : `${toFaDigits(Number(stats.ordersToday ?? 0))} سفارش امروز`}
+        action={<button type="button" className="cp-btn bg-white text-amber-950 shadow-lg" onClick={() => navigate('/seller/products')}>مدیریت محصولات ←</button>}
+      />
       {dashboard.isLoading ? <Spinner /> : null}
       <section className="grid grid-cols-2 gap-2">
         <StatCard label="سفارش امروز" value={toFaDigits(Number(stats.ordersToday ?? 0))} />

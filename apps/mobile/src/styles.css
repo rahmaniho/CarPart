@@ -5,60 +5,103 @@
 @tailwind utilities;
 
 :root {
-  /* توکن‌های طراحی — پالت آرام با کنتراست دسترس‌پذیر */
-  --cp-primary: 15 118 110; /* teal-700 */
-  --cp-primary-dark: 17 94 89;
+  --cp-primary: 13 148 136;
+  --cp-primary-dark: 15 118 110;
   --cp-primary-soft: 204 251 241;
-  --cp-ink: 24 35 48;
+  --cp-ink: 15 23 42;
   --cp-muted: 100 116 139;
   --cp-surface: 255 255 255;
   --cp-line: 226 232 240;
   --cp-danger: 185 28 28;
   --cp-warn: 180 83 9;
   --cp-ok: 21 128 61;
+  color-scheme: light;
+  font-synthesis: none;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-}
-
+html, body, #root { height: 100%; }
+html { background: #e2e8f0; }
 body {
   @apply bg-slate-100 text-ink font-sans antialiased;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgb(var(--cp-primary) / .3);
+  outline-offset: 2px;
 }
 
 @layer components {
   .cp-card {
-    @apply bg-surface rounded-2xl border border-line shadow-sm p-4;
+    @apply rounded-2xl border border-white/80 bg-surface p-4 shadow-sm;
+    box-shadow: 0 1px 2px rgb(15 23 42 / .03), 0 10px 30px rgb(15 23 42 / .04);
   }
   .cp-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50;
+    transform: translateZ(0);
   }
+  .cp-btn:active { transform: scale(.975); }
   .cp-btn-primary {
-    @apply cp-btn bg-primary text-white active:bg-primary-dark;
+    @apply cp-btn bg-primary text-white;
+    box-shadow: 0 8px 20px rgb(var(--cp-primary) / .22);
   }
-  .cp-btn-ghost {
-    @apply cp-btn bg-slate-100 text-ink active:bg-slate-200;
-  }
-  .cp-btn-danger {
-    @apply cp-btn bg-red-700 text-white active:bg-red-800;
-  }
+  .cp-btn-primary:hover { @apply bg-primary-dark; }
+  .cp-btn-ghost { @apply cp-btn border border-slate-200/70 bg-white/70 text-ink active:bg-slate-100; }
+  .cp-btn-danger { @apply cp-btn bg-red-700 text-white active:bg-red-800; }
   .cp-field {
-    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30;
+    @apply min-h-11 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10;
   }
-  .cp-label {
-    @apply mb-1 block text-xs font-medium text-muted;
-  }
-  .cp-chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
-  }
+  .cp-label { @apply mb-1.5 block text-xs font-semibold text-muted; }
+  .cp-chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold; }
 }
 
-/* امنیت: جلوگیری از بزرگ‌نمایی ناخواسته در فیلدها در iOS */
-input,
-select,
-textarea {
-  font-size: 16px;
+.app-shell {
+  --role-accent: 13 148 136;
+  --role-accent-dark: 15 23 42;
+  @apply mx-auto flex min-h-full max-w-md flex-col bg-slate-50;
+  box-shadow: 0 0 80px rgb(15 23 42 / .12);
 }
+.theme-seller { --role-accent: 245 158 11; --role-accent-dark: 69 26 3; --cp-primary: 217 119 6; --cp-primary-dark: 180 83 9; --cp-primary-soft: 254 243 199; }
+.theme-courier { --role-accent: 124 58 237; --role-accent-dark: 30 27 75; --cp-primary: 109 40 217; --cp-primary-dark: 91 33 182; --cp-primary-soft: 237 233 254; }
+.theme-admin { --role-accent: 37 99 235; --role-accent-dark: 15 23 42; --cp-primary: 37 99 235; --cp-primary-dark: 29 78 216; --cp-primary-soft: 219 234 254; }
+.app-header {
+  @apply sticky top-0 z-30 overflow-hidden;
+  background: linear-gradient(125deg, rgb(var(--role-accent-dark)), rgb(var(--role-accent) / .92));
+  box-shadow: 0 10px 32px rgb(var(--role-accent-dark) / .18);
+}
+.app-header__glow { position:absolute; width:180px; height:180px; left:-45px; top:-110px; border-radius:999px; background:rgb(255 255 255 / .14); filter:blur(2px); }
+.app-content { @apply flex-1 space-y-4 p-4 pb-28; content-visibility: auto; }
+.app-nav {
+  @apply fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t border-white/60 bg-white/90;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -12px 34px rgb(15 23 42 / .08);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+.app-nav__item { @apply relative flex min-h-[62px] flex-col items-center justify-center gap-1 px-1 text-[10px] font-bold text-muted transition; }
+.app-nav__item--active { color: rgb(var(--cp-primary)); }
+.app-nav__item--active::before { content:''; @apply absolute top-0 h-1 w-8 rounded-b-full; background: rgb(var(--cp-primary)); }
+.app-nav__icon { @apply text-xl leading-none transition-transform; filter: grayscale(.25); }
+.app-nav__item--active .app-nav__icon { transform: translateY(-2px) scale(1.08); filter:none; }
+.network-banner { @apply sticky top-0 z-50 bg-amber-500 px-3 py-2 text-center text-xs font-bold text-amber-950; }
+.skip-link { @apply fixed z-[100] rounded-lg bg-slate-950 px-3 py-2 text-xs text-white; top:-100px; right:12px; }
+.skip-link:focus { top:12px; }
+
+.role-hero {
+  @apply relative flex min-h-[190px] items-center overflow-hidden rounded-[1.75rem] p-5;
+  background: radial-gradient(circle at 10% 10%, rgb(255 255 255 / .12), transparent 35%), linear-gradient(135deg, #0f172a, #134e4a);
+  box-shadow: 0 18px 45px rgb(15 23 42 / .18);
+}
+.role-hero::after { content:''; position:absolute; width:160px; height:160px; border:1px solid rgb(255 255 255 / .08); border-radius:999px; left:-60px; bottom:-95px; }
+.role-hero--seller { background: radial-gradient(circle at 10% 10%, rgb(251 191 36 / .18), transparent 38%), linear-gradient(135deg, #1c1917, #78350f); }
+.role-hero--courier { background: radial-gradient(circle at 10% 10%, rgb(167 139 250 / .2), transparent 38%), linear-gradient(135deg, #172554, #4c1d95); }
+.role-hero--admin { background: radial-gradient(circle at 10% 10%, rgb(96 165 250 / .2), transparent 38%), linear-gradient(135deg, #020617, #1e3a8a); }
+.role-hero__eyebrow { @apply flex items-center gap-2 text-[10px] font-black tracking-wider text-white/60; }
+.role-hero__pulse { @apply h-2 w-2 rounded-full bg-emerald-400; box-shadow:0 0 0 5px rgb(52 211 153 / .12); }
+.role-art { @apply relative z-10 h-28 w-28 shrink-0; filter: drop-shadow(0 14px 16px rgb(0 0 0 / .22)); }
+.role-art-dot { transform-origin:center; animation: rolePulse 2.5s ease-in-out infinite; }
+
+input, select, textarea { font-size: 16px; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+@keyframes rolePulse { 50% { transform:scale(1.8); opacity:.35; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
