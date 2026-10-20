@@ -36,10 +36,10 @@ export class Payment extends BaseEntity {
   @Column({ length: 32, default: 'CREATED' })
   status!: PaymentStatus;
 
-  /** شناسه یکتای داخلی تراکنش (برای ارجاع در گزارش‌ها) */
+  /** شناسه یکتای تراکنش در درگاه (تا پیش از تأیید، خالی است) */
   @Index({ unique: true })
-  @Column({ length: 64 })
-  referenceId!: string;
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  referenceId!: string | null;
 
   /** شناسه/authority درگاه پرداخت */
   @Column({ type: 'varchar', length: 128, nullable: true })

@@ -237,7 +237,7 @@ export class AdminService {
   async topSellers(since: Date): Promise<Array<{ id: string; storeName: string; orders: number; revenue: number; platformRevenue: number }>> {
     const rows = await this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .select('commission.sellerId', 'sellerId')
       .addSelect('COUNT(*)', 'orders')
       .addSelect('COALESCE(SUM(order.payableTotal), 0)', 'revenue')

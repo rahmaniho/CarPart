@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { AppException, ErrorCodes, NotFoundException } from '../../common/errors/app-error';
 import { buildPage, toSkipTake, type PageResult } from '../../common/dto/pagination.dto';
+import { Order } from '../orders/entities/order.entity';
 import { Seller } from '../sellers/entities/seller.entity';
 import { Commission } from './entities/commission.entity';
 import { PricingService } from './pricing.service';
@@ -52,7 +53,7 @@ export class CommissionService {
   async summarize(sellerId: string | null, from: Date, to: Date): Promise<CommissionSummary> {
     const qb = this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .select('COUNT(*)', 'orderCount')
       .addSelect('COALESCE(SUM(commission.itemsTotal), 0)', 'itemsTotal')
       .addSelect('COALESCE(SUM(commission.commissionBase), 0)', 'commissionBase')
@@ -82,7 +83,7 @@ export class CommissionService {
   async bySeller(from: Date, to: Date): Promise<Array<{ sellerId: string; storeName: string; orders: number; platformAmount: number; sellerNet: number }>> {
     const rows = await this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .select('commission.sellerId', 'sellerId')
       .addSelect('COUNT(*)', 'orders')
       .addSelect('COALESCE(SUM(commission.platformAmount), 0)', 'platformAmount')
@@ -120,7 +121,7 @@ export class CommissionService {
   async listForSeller(sellerId: string, from: Date, to: Date): Promise<Commission[]> {
     return this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .where('commission.sellerId = :sellerId', { sellerId })
       .andWhere('order.createdAt BETWEEN :from AND :to', { from, to })
       .orderBy('order.createdAt', 'DESC')

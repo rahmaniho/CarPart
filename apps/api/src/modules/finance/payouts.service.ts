@@ -58,7 +58,7 @@ export class PayoutsService {
     if (!seller) throw new NotFoundException('فروشگاه');
     const commissions = await this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .where('commission.sellerId = :sellerId', { sellerId })
       .andWhere('commission.status = :status', { status: 'recorded' })
       .andWhere('commission.payoutId IS NULL')
@@ -333,7 +333,7 @@ export class PayoutsService {
   }> {
     const commissionRows = await this.commissions
       .createQueryBuilder('commission')
-      .innerJoin('commission.order', 'order')
+      .innerJoin(Order, 'order', 'order.id = commission.orderId')
       .select('COALESCE(SUM(order.payableTotal), 0)', 'gmv')
       .addSelect('COALESCE(SUM(commission.platformAmount), 0)', 'platformCommission')
       .addSelect('COALESCE(SUM(commission.sellerNetAmount), 0)', 'sellerNet')

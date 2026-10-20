@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
 import {
   boundingBox,
   haversineKm,
@@ -123,6 +123,36 @@ export class SearchService {
   ) {}
 
   /** جست‌وجوی پیشنهادهای فروش (نتیجه اصلی برای مکانیک). */
+  /**
+   * فیلتر متنی tolerant بر پایه واژه.
+   *
+   * هر واژه از عبارت جست‌وجو باید در یکی از فیلدهای متنی یافت شود؛ بنابراین ترتیب واژه‌ها،
+   * فاصله‌های اضافی و نیم‌فاصله نتیجه را از بین نمی‌برد. پیش از مقایسه، نویسه‌های فارسی/عربی
+   * (ی/ي و ک/ك) و ارقام فارسی/عربی یکسان‌سازی می‌شوند.
+   */
+  private applyTextFilter<T extends ObjectLiteral>(
+    qb: SelectQueryBuilder<T>,
+    raw: string,
+    fields: { textColumns: string[]; codeColumns: string[] },
+  ): void {
+    const tokens = normalizeFa(raw)
+      .split(/\s+/)
+      .filter((token) => token.length > 0)
+      .slice(0, 6);
+    tokens.forEach((token, index) => {
+      const latin = toLatinDigits(token).replace(/\s+/g, '').toLowerCase();
+      const textClauses = fields.textColumns.map((column) => `${column} LIKE :tok${index}`);
+      const codeClauses = fields.codeColumns.flatMap((column) => [
+        `LOWER(${column}) LIKE :tokLatin${index}`,
+        `REPLACE(LOWER(${column}), ' ', '') LIKE :tokLatin${index}`,
+      ]);
+      qb.andWhere(`(${[...textClauses, ...codeClauses].join(' OR ')})`, {
+        [`tok${index}`]: `%${token}%`,
+        [`tokLatin${index}`]: `%${latin}%`,
+      });
+    });
+  }
+
   async searchOffers(query: SearchQueryDto, context: SearchContext = {}): Promise<PageResult<OfferSearchResult>> {
     const { skip, take } = toSkipTake(query.page, query.pageSize);
     const maxCandidates = await this.settings.getNumber('search.max_candidates', 300);
@@ -309,17 +339,10 @@ export class SearchService {
 
     const raw = query.q?.trim() ?? '';
     if (raw) {
-      const normalized = normalizeFa(raw);
-      const latin = toLatinDigits(raw).replace(/\s+/g, '');
-      qb.andWhere(
-        `(part.searchKey LIKE :nq OR sp.searchKey LIKE :nq OR part.nameFa LIKE :like OR LOWER(sp.sku) LIKE :likeLower OR LOWER(part.technicalCode) LIKE :likeLower OR LOWER(part.oemCode) LIKE :likeLower OR REPLACE(part.technicalCode, ' ', '') LIKE :compact OR REPLACE(part.oemCode, ' ', '') LIKE :compact)`,
-        {
-          nq: `%${normalized}%`,
-          like: `%${raw}%`,
-          likeLower: `%${latin.toLowerCase()}%`,
-          compact: `%${latin.toUpperCase()}%`,
-        },
-      );
+      this.applyTextFilter(qb, raw, {
+        textColumns: ['part.searchKey', 'sp.searchKey', 'part.nameFa'],
+        codeColumns: ['sp.sku', 'part.technicalCode', 'part.oemCode'],
+      });
     }
     if (query.categoryId) qb.andWhere('part.categoryId = :categoryId', { categoryId: query.categoryId });
     if (query.brandId) qb.andWhere('part.brandId = :brandId', { brandId: query.brandId });
@@ -473,11 +496,9 @@ export class SearchService {
       .where('part.isActive = :active', { active: true });
     const raw = query.q?.trim() ?? '';
     if (raw) {
-      const normalized = normalizeFa(raw);
-      qb.andWhere('(part.searchKey LIKE :nq OR part.nameFa LIKE :like OR LOWER(part.technicalCode) LIKE :likeLower OR LOWER(part.oemCode) LIKE :likeLower)', {
-        nq: `%${normalized}%`,
-        like: `%${raw}%`,
-        likeLower: `%${toLatinDigits(raw).toLowerCase()}%`,
+      this.applyTextFilter(qb, raw, {
+        textColumns: ['part.searchKey', 'part.nameFa'],
+        codeColumns: ['part.technicalCode', 'part.oemCode'],
       });
     }
     if (query.categoryId) qb.andWhere('part.categoryId = :categoryId', { categoryId: query.categoryId });

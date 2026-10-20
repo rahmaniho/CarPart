@@ -159,7 +159,7 @@ export class PaymentsService {
         mode: provider.mode,
         amount,
         status: 'PENDING',
-        referenceId: '',
+        referenceId: null,
         gatewayAuthority: initiation.authority,
         idempotencyKey: idempotencyKey ?? null,
         requestPayload: { ...initiation.raw, paymentUrl: initiation.paymentUrl, signature: initiation.signature ?? null },
@@ -229,7 +229,7 @@ export class PaymentsService {
 
     if (result.success) {
       payment.status = 'SUCCESS';
-      payment.referenceId = result.referenceId ?? '';
+      payment.referenceId = result.referenceId ?? null;
       payment.gatewayTrackingNumber = result.trackingNumber ?? null;
       payment.cardPanMasked = result.cardPanMasked ?? null;
       payment.paidAt = new Date();
