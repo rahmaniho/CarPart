@@ -1,9 +1,37 @@
 import 'reflect-metadata';
+import fs from 'node:fs';
+import path from 'node:path';
 import { Logger } from '@nestjs/common';
 import { buildConfig, type AppConfig } from '../config/configuration';
 import { validateEnv } from '../config/env.schema';
 import { createDataSource } from './data-source';
 import { seedDatabase } from './seed';
+
+function loadEnvFilesIfNeeded(): void {
+  const candidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), 'apps/api/.env'),
+    path.resolve(__dirname, '../../.env'),
+    path.resolve(__dirname, '../../../../.env'),
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const raw = fs.readFileSync(file, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '');
+      if (process.env[key] === undefined) {
+        process.env[key] = val;
+      }
+    }
+  }
+}
+
+loadEnvFilesIfNeeded();
 
 const logger = new Logger('DatabaseCLI');
 

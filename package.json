@@ -16,7 +16,7 @@
     "build": "npm run build -w @carpart/contract && npm run build -w @carpart/api && npm run build -w @carpart/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test -w @carpart/api",
+    "test": "npm run test -w @carpart/api && npm run test -w @carpart/web",
     "test:watch": "npm run test:watch -w @carpart/api",
     "db:migrate": "npm run db:migrate -w @carpart/api",
     "db:seed": "npm run db:seed -w @carpart/api",

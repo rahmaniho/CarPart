@@ -34,6 +34,7 @@ export function configureApp(app: INestApplication, config: AppConfig, options: 
       helmet({
         contentSecurityPolicy: false,
         crossOriginResourcePolicy: { policy: 'cross-origin' },
+        frameguard: config.app.isProduction ? { action: 'sameorigin' } : false,
       }),
     );
   }
@@ -48,8 +49,22 @@ export function configureApp(app: INestApplication, config: AppConfig, options: 
   app.useGlobalPipes(createValidationPipe());
 
   if (options.cors !== false) {
+    const allowed = new Set(config.app.corsOrigins);
     app.enableCors({
-      origin: config.app.corsOrigins.length ? config.app.corsOrigins : true,
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        if (!origin || allowed.has('*') || allowed.size === 0 || allowed.has(origin)) {
+          callback(null, true);
+          return;
+        }
+        if (
+          !config.app.isProduction &&
+          (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin) || /^https:\/\/[a-z0-9-]+\.e2b\.app$/i.test(origin))
+        ) {
+          callback(null, true);
+          return;
+        }
+        callback(null, false);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Idempotency-Key', 'X-Request-Id'],

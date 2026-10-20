@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-carpart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carpart_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-carpart}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER:-carpart} -d $${POSTGRES_DB:-carpart}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_TYPE: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-carpart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carpart_secret_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-carpart}
+      DB_SYNC: 'false'
+      DB_MIGRATIONS_RUN: 'true'
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET الزامی است}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET الزامی است}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY الزامی است}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-sandbox}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      MAP_PROVIDER: ${MAP_PROVIDER:-mock}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - '4000:4000'
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '8080:80'
+
+volumes:
+  pgdata:
+  uploads:

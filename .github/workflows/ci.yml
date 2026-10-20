@@ -1,0 +1,70 @@
+name: تضمین کیفیت و یکپارچگی کارپارت (CI)
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: ساخت، بررسی قرارداد، lint و آزمون‌های یکپارچه
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: دریافت کد منبع
+        uses: actions/checkout@v4
+
+      - name: راه‌اندازی Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: نصب وابستگی‌ها
+        run: npm ci
+
+      - name: ساخت بسته قرارداد مشترک
+        run: npm run build -w @carpart/contract
+
+      - name: بررسی خودکار هم‌ترازی قرارداد فرانت‌اند و بک‌اند
+        run: npm run check:contract
+
+      - name: بررسی سخت‌گیرانه انواع TypeScript
+        run: npm run typecheck
+
+      - name: بررسی قواعد ESLint
+        run: npm run lint
+
+      - name: ساخت نسخه‌های اجرایی (API + Web)
+        run: npm run build
+
+      - name: اجرای آزمون‌های واحد و یکپارچه (Jest + Vitest)
+        run: npm test
+
+      - name: آزمون دود سرتاسری زنده (Smoke E2E) روی سرور واقعی
+        env:
+          NODE_ENV: development
+          PORT: '4000'
+          DB_TYPE: sqljs
+          DB_SQLJS_FILE: /tmp/ci-carpart.sqlite
+          JWT_ACCESS_SECRET: ci-access-secret-minimum-32-characters-long
+          JWT_REFRESH_SECRET: ci-refresh-secret-minimum-32-characters-long
+          DATA_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          AUTH_EXPOSE_DEV_OTP: 'true'
+          PAYMENT_PROVIDER: sandbox
+          SMS_PROVIDER: mock
+          MAP_PROVIDER: mock
+        run: |
+          npm run db:seed
+          nohup node apps/api/dist/main.js > /tmp/carpart-api.log 2>&1 &
+          API_PID=$!
+          trap "kill $API_PID || true" EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4000/health/ready > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          python3 scripts/smoke_e2e.py
