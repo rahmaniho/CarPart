@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ساخت APKهای اندروید کارپارت (سه Flavor: mechanic و courier)
+# ساخت APKهای اندروید کارپارت (چهار Flavor: mechanic، courier، seller و admin)
 # پیش‌نیاز: JDK 21 + Android SDK (compileSdk 35) — مطابق apps/mobile/ANDROID.md
 set -euo pipefail
 
@@ -13,13 +13,14 @@ npx cap sync android
 
 echo "==> ساخت APKها"
 cd android
-./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug assembleSellerDebug
+./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug assembleSellerDebug assembleAdminDebug
 
 echo "==> خروجی:"
 echo "  app/build/outputs/apk/mechanic/debug/app-mechanic-debug.apk"
 echo "  app/build/outputs/apk/courier/debug/app-courier-debug.apk"
 echo "  app/build/outputs/apk/seller/debug/app-seller-debug.apk"
+echo "  app/build/outputs/apk/admin/debug/app-admin-debug.apk"
 echo ""
 echo "برای نسخه release (با keystore واقعی):"
 echo "  CARPART_KEYSTORE_FILE=... CARPART_KEYSTORE_PASSWORD=... CARPART_KEY_ALIAS=... CARPART_KEY_PASSWORD=... \\"
-echo "    ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease"
+echo "    ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease assembleAdminRelease"

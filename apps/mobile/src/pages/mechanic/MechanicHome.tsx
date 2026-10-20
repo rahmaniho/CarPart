@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 import { useSessionStore } from '../../lib/session';
 import { AppShell, type TabDef } from '../../components/AppShell';
 import { EmptyState, Section, Spinner, StatusChip } from '../../components/ui';
+import { RoleHero } from '../../components/RoleHero';
 import { dateFa, formatToman } from '../../lib/format';
 
 export const MECHANIC_TABS: TabDef[] = [
@@ -32,6 +33,13 @@ export default function MechanicHome(): JSX.Element {
 
   return (
     <AppShell title={`سلام، ${user?.fullName ?? 'همکار گرامی'}`} tabs={MECHANIC_TABS}>
+      <RoleHero
+        variant="mechanic"
+        eyebrow="تأمین هوشمند قطعه"
+        title="قطعهٔ درست، بدون اتلاف وقت"
+        description="جست‌وجوی دقیق بر اساس خودرو، مقایسهٔ شفاف فروشندگان و پیگیری یکپارچه تا تحویل."
+        action={<button type="button" className="cp-btn bg-white text-slate-950 shadow-lg" onClick={() => navigate('/mechanic/search')}>شروع جست‌وجو ←</button>}
+      />
       <form
         className="cp-card space-y-3"
         onSubmit={(event) => {

@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 
 export interface TabDef {
@@ -8,7 +8,23 @@ export interface TabDef {
   icon: string;
 }
 
-/** پوسته موبایل: هدر + محتوا + نوار پایین (تب‌ها) با رعایت RTL */
+function NetworkStatus(): JSX.Element | null {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
+  if (online) return null;
+  return <div className="network-banner" role="status">اتصال اینترنت قطع است؛ اطلاعات آنلاین پس از اتصال دریافت می‌شود.</div>;
+}
+
+/** پوستهٔ نقش‌محور با safe-area، ناوبری دسترس‌پذیر و بازخورد اتصال. */
 export function AppShell({
   title,
   tabs,
@@ -20,32 +36,35 @@ export function AppShell({
   children: ReactNode;
   headerExtra?: ReactNode;
 }): JSX.Element {
+  const { pathname } = useLocation();
+  const role = pathname.split('/')[1] || 'mechanic';
+
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col bg-slate-100">
-      <header className="sticky top-0 z-20 border-b border-line bg-primary text-white">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-base font-bold">{title}</h1>
+    <div className={clsx('app-shell', `theme-${role}`)}>
+      <a className="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
+      <NetworkStatus />
+      <header className="app-header">
+        <div className="app-header__glow" />
+        <div className="relative flex items-center justify-between gap-3 px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))]">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold tracking-[.16em] text-white/55">CARPART</p>
+            <h1 className="truncate text-base font-black text-white">{title}</h1>
+          </div>
           {headerExtra}
         </div>
       </header>
-      <main className="flex-1 space-y-4 p-4 pb-24">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-md border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+      <main id="main-content" className="app-content">{children}</main>
+      <nav className="app-nav" aria-label="منوی اصلی">
         <ul className="grid grid-flow-col">
           {tabs.map((tab) => (
             <li key={tab.to}>
               <NavLink
                 to={tab.to}
-                className={({ isActive }) =>
-                  clsx(
-                    'flex flex-col items-center gap-0.5 px-2 py-2.5 text-[11px] font-semibold',
-                    isActive ? 'text-primary' : 'text-muted hover:text-ink',
-                  )
-                }
+                end={tab.to.split('/').filter(Boolean).length === 1}
+                className={({ isActive }) => clsx('app-nav__item', isActive && 'app-nav__item--active')}
               >
-                <span className="text-lg leading-none" aria-hidden>
-                  {tab.icon}
-                </span>
-                {tab.label}
+                <span className="app-nav__icon" aria-hidden>{tab.icon}</span>
+                <span>{tab.label}</span>
               </NavLink>
             </li>
           ))}

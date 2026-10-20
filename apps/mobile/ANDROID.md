@@ -1,15 +1,16 @@
 # اپلیکیشن اندروید کارپارت — راهنمای کامل
 
 این پوشه شامل یک **پروژه Android واقعی** (Capacitor) است که وب‌اپ موبایل (`src/`) را در
-WebView بومی بسته‌بندی می‌کند. سه Flavor مستقل:
+WebView بومی بسته‌بندی می‌کند. چهار Flavor مستقل:
 
 | Flavor | Application ID | نام اپ | رنگ برند |
 |---|---|---|---|
 | `mechanic` | `ir.carpart.app.mechanic` | کارپارت مکانیک | سبز فیروزه‌ای `#0F766E` |
 | `courier` | `ir.carpart.app.courier` | کارپارت پیک | نارنجی `#C2410C` |
-| `seller` | `ir.carpart.app.seller` | کارپارت تأمین‌کننده | بنفش `#6D28D9` |
+| `seller` | `ir.carpart.app.seller` | کارپارت فروشنده | کهربایی `#F59E0B` |
+| `admin` | `ir.carpart.app.admin` | کارپارت مدیریت | آبی `#3B82F6` |
 
-هر سه APK از یک کدبیس ساخته می‌شوند و بر اساس نقش کاربر پوستهٔ درست را نشان می‌دهند.
+هر چهار APK از یک کدبیس ساخته می‌شوند و بر اساس نقش کاربر پوستهٔ درست را نشان می‌دهند.
 
 ## 🛡 پایداری (رفع کرش نسخه قبل)
 - **Firebase placeholder** در `MainActivity`: بدون `google-services.json` هم اپ هرگز کرش نمی‌کند (ثبت Push شکست می‌خورد ولی اپ پایدار می‌ماند)
@@ -31,7 +32,7 @@ WebView بومی بسته‌بندی می‌کند. سه Flavor مستقل:
 ## ساخت APK — دو راه
 
 ### ۱) GitHub Actions (پیشنهادی — بدون نیاز به SDK محلی)
-Workflow `.github/workflows/android.yml` در هر PR/push هر سه APK را می‌سازد و به‌صورت
+Workflow `.github/workflows/android.yml` در هر PR/push هر چهار APK را می‌سازد و به‌صورت
 **آرتیفکت** (`carpart-android-apks`) بارگذاری می‌کند. دانلود:
 ```bash
 gh run download --name carpart-android-apks
@@ -43,14 +44,14 @@ gh run download --name carpart-android-apks
 ./scripts/build-android.sh
 # یا مستقیم:
 cd apps/mobile && npm run build && npx cap sync android && cd android
-./gradlew assembleMechanicDebug assembleCourierDebug assembleSellerDebug
+./gradlew assembleMechanicDebug assembleCourierDebug assembleSellerDebug assembleAdminDebug
 ```
-خروجی: `android/app/build/outputs/apk/{mechanic,courier}/debug/`
+خروجی: `android/app/build/outputs/apk/{mechanic,courier,seller,admin}/debug/`
 
 نسخه انتشار (با keystore):
 ```bash
 CARPART_KEYSTORE_FILE=/path/release.jks CARPART_KEYSTORE_PASSWORD=... CARPART_KEY_ALIAS=... CARPART_KEY_PASSWORD=... \
-  ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease
+  ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease assembleAdminRelease
 ```
 
 ## اعلان فشاری واقعی (FCM)

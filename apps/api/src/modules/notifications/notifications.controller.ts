@@ -46,7 +46,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'ثبت/به‌روزرسانی توکن دستگاه برای اعلان فشاری (FCM)' })
   async registerDevice(
     @CurrentUser() user: RequestUser,
-    @Body() dto: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'web' },
+    @Body() dto: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'seller' | 'admin' | 'web' },
   ) {
     const entry = await this.notifications.registerDeviceToken(user.id, {
       token: String(dto.token ?? ''),

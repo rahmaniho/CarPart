@@ -53,10 +53,8 @@ android {
             signingConfig keystorePath != null && !keystorePath.isEmpty() ? signingConfigs.release : signingConfigs.debug
         }
     }
-    // دو Flavor اندروید از یک کدبیس مشترک:
-    //   ./gradlew assembleMechanicDebug   → اپ مکانیک (ir.carpart.app.mechanic)
-    //   ./gradlew assembleCourierDebug   → اپ پیک (ir.carpart.app.courier)
-    // هر دو به همان وب‌اپ (dist) وصل‌اند و بر اساس نقش کاربر، پوسته مربوطه نمایش داده می‌شود.
+    // چهار Flavor اندروید از یک کدبیس مشترک: مکانیک، پیک، فروشنده و مدیریت.
+    // هر چهار خروجی از وب‌اپ بهینه‌شدهٔ مشترک استفاده می‌کنند و مجوز نقش در API کنترل می‌شود.
     flavorDimensions "role"
     productFlavors {
         mechanic {
@@ -73,6 +71,11 @@ android {
             dimension "role"
             applicationId "ir.carpart.app.seller"
             versionNameSuffix "-seller"
+        }
+        admin {
+            dimension "role"
+            applicationId "ir.carpart.app.admin"
+            versionNameSuffix "-admin"
         }
     }
 }

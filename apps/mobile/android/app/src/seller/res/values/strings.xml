@@ -1,5 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">کارپارت تأمین‌کننده</string>
-    <string name="title_activity_main">کارپارت تأمین‌کننده</string>
-</resources>
+<resources><string name="app_name">کارپارت فروشنده</string><string name="title_activity_main">کارپارت فروشنده</string><string name="package_name">ir.carpart.app.seller</string><string name="custom_url_scheme">ir.carpart.app.seller</string></resources>
