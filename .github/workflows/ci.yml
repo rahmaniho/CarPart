@@ -3,8 +3,12 @@ name: تضمین کیفیت و یکپارچگی کارپارت (CI)
 on:
   push:
     branches: [main, 'arena/**']
+    paths-ignore:
+      - 'releases/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'releases/**'
 
 jobs:
   verify:
