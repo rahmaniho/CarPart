@@ -18,3 +18,87 @@ android {
     def vMinor = vParts.size() > 1 && vParts[1].isInteger() ? vParts[1].toInteger() : 0
     def vPatch = vParts.size() > 2 && vParts[2].isInteger() ? vParts[2].toInteger() : 0
     def versionCodeNumber = vMajor * 10000 + vMinor * 100 + vPatch
+        + (rootPackageJson.version.split('\.').collect { it.isInteger() ? it.toInteger() : 0 }[1] * 100)
+        + (rootPackageJson.version.split('\.').collect { it.isInteger() ? it.toInteger() : 0 }[2])
+
+    defaultConfig {
+        applicationId "ir.carpart.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode versionCodeNumber
+        versionName rootVersion
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // امضای نسخه انتشار: اگر متغیرهای CARPART_KEYSTORE_* تنظیم شده باشند از keystore
+    // واقعی استفاده می‌شود؛ وگرنه خروجی release با کلید debug امضا می‌شود (فقط برای آزمایش).
+    def keystorePath = System.getenv('CARPART_KEYSTORE_FILE')
+    signingConfigs {
+        release {
+            if (keystorePath != null && !keystorePath.isEmpty()) {
+                storeFile file(keystorePath)
+                storePassword System.getenv('CARPART_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CARPART_KEY_ALIAS')
+                keyPassword System.getenv('CARPART_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig keystorePath != null && !keystorePath.isEmpty() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    // دو Flavor اندروید از یک کدبیس مشترک:
+    //   ./gradlew assembleMechanicDebug   → اپ مکانیک (ir.carpart.app.mechanic)
+    //   ./gradlew assembleCourierDebug   → اپ پیک (ir.carpart.app.courier)
+    // هر دو به همان وب‌اپ (dist) وصل‌اند و بر اساس نقش کاربر، پوسته مربوطه نمایش داده می‌شود.
+    flavorDimensions "role"
+    productFlavors {
+        mechanic {
+            dimension "role"
+            applicationId "ir.carpart.app.mechanic"
+            versionNameSuffix "-mechanic"
+        }
+        courier {
+            dimension "role"
+            applicationId "ir.carpart.app.courier"
+            versionNameSuffix "-courier"
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
