@@ -1,6 +1,6 @@
 {
   "name": "@carpart/mobile",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "اپلیکیشن موبایل (اندروید/PWA) کارپارت برای مکانیک و پیک — فارسی، راست‌به‌چپ",
