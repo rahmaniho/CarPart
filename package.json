@@ -1,0 +1,34 @@
+{
+  "name": "carpart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "پلتفرم هوشمند تأمین و ارسال سریع لوازم یدکی خودرو",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run build:contract",
+    "build:contract": "npm run build -w @carpart/contract",
+    "dev": "concurrently -n API,WEB -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev -w @carpart/api",
+    "dev:web": "npm run dev -w @carpart/web",
+    "build": "npm run build -w @carpart/contract && npm run build -w @carpart/api && npm run build -w @carpart/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test -w @carpart/api",
+    "test:watch": "npm run test:watch -w @carpart/api",
+    "db:migrate": "npm run db:migrate -w @carpart/api",
+    "db:seed": "npm run db:seed -w @carpart/api",
+    "db:reset": "npm run db:reset -w @carpart/api",
+    "check:contract": "node scripts/check-contract.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}
