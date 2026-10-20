@@ -167,7 +167,7 @@ export const DEFAULT_SETTINGS: DefaultSetting[] = [
     key: 'notifications.channels',
     group: 'notifications',
     valueType: 'json',
-    value: { inapp: true, sms: true, email: false, push: false },
+    value: { inapp: true, sms: true, email: false, push: true },
     faLabel: 'کانال‌های فعال اعلان',
   },
   { key: 'notifications.quiet_hours_start', group: 'notifications', valueType: 'string', value: '22:00', faLabel: 'شروع ساعات سکوت پیامکی' },

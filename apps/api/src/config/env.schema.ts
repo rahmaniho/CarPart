@@ -57,6 +57,8 @@ export const envSchema = z.object({
   SMS_API_KEY: z.string().default(''),
   SMS_SENDER: z.string().default(''),
   EMAIL_PROVIDER: z.enum(['mock', 'smtp']).default('mock'),
+  PUSH_PROVIDER: z.enum(['mock', 'fcm']).default('mock'),
+  FCM_SERVER_KEY: z.string().default(''),
   SMTP_URL: z.string().default(''),
   EMAIL_FROM: z.string().default('no-reply@carpart.local'),
 

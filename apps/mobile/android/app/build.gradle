@@ -3,12 +3,19 @@ apply plugin: 'com.android.application'
 android {
     namespace "ir.carpart.app"
     compileSdk rootProject.ext.compileSdkVersion
+    // نسخه‌بندی از package.json ریشه (دارایی واحد نسخه)
+    def rootPackageJson = new groovy.json.JsonSlurper().parseText(file('../../../package.json').text)
+    def versionCodeNumber = (rootPackageJson.version.split('\.').collect { it.isInteger() ? it.toInteger() : 0 }[0] * 10000)
+        + (rootPackageJson.version.split('\.').collect { it.isInteger() ? it.toInteger() : 0 }[1] * 100)
+        + (rootPackageJson.version.split('\.').collect { it.isInteger() ? it.toInteger() : 0 }[2])
+
     defaultConfig {
         applicationId "ir.carpart.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode versionCodeNumber
+        versionName rootPackageJson.version
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +23,24 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // امضای نسخه انتشار: اگر متغیرهای CARPART_KEYSTORE_* تنظیم شده باشند از keystore
+    // واقعی استفاده می‌شود؛ وگرنه خروجی release با کلید debug امضا می‌شود (فقط برای آزمایش).
+    def keystorePath = System.getenv('CARPART_KEYSTORE_FILE')
+    signingConfigs {
+        release {
+            if (keystorePath != null && !keystorePath.isEmpty()) {
+                storeFile file(keystorePath)
+                storePassword System.getenv('CARPART_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('CARPART_KEY_ALIAS')
+                keyPassword System.getenv('CARPART_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig keystorePath != null && !keystorePath.isEmpty() ? signingConfigs.release : signingConfigs.debug
         }
     }
     // دو Flavor اندروید از یک کدبیس مشترک:

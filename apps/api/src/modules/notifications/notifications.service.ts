@@ -8,6 +8,8 @@ import { CONFIG_TOKEN, type AppConfig } from '../../config/configuration';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SystemSettingsService } from '../settings/system-settings.service';
 import { Notification } from './entities/notification.entity';
+import { DeviceToken } from './entities/device-token.entity';
+import { SmsGateway } from './sms.gateway';
 import { getEvent, missingVarsOf, renderTemplate } from './notification-events';
 
 export interface NotifyInput {
@@ -46,6 +48,8 @@ export class NotificationsService {
 
   constructor(
     @InjectRepository(Notification) private readonly repo: Repository<Notification>,
+    @InjectRepository(DeviceToken) private readonly deviceTokens: Repository<DeviceToken>,
+    private readonly smsGateway: SmsGateway,
     @Inject(CONFIG_TOKEN) private readonly config: AppConfig,
     private readonly jobs: JobQueueService,
     private readonly settings: SystemSettingsService,
@@ -65,7 +69,7 @@ export class NotificationsService {
       push: false,
     });
     const requested = input.channels ?? event.channels;
-    const channels = requested.filter((channel) => channel !== 'push' && enabledChannels[channel] !== false);
+    const channels = requested.filter((channel) => enabledChannels[channel] !== false);
 
     const vars = this.prepareVars(input.vars ?? {}, input.moneyVars ?? []);
     const missing = missingVarsOf(event, vars);
@@ -81,7 +85,11 @@ export class NotificationsService {
     const created: Notification[] = [];
     let duplicated = 0;
 
+    // برای اعلان فشاری: فقط اگر کاربر دستگاه فعال (توکن FCM) داشته باشد رکورد ساخته می‌شود
+    const activePushTokens = channels.includes('push') ? await this.deviceTokens.count({ where: { userId: input.userId, isActive: true } }) : 0;
+
     for (const channel of channels) {
+      if (channel === 'push' && activePushTokens === 0) continue;
       const dedupeKey = input.dedupeKey
         ? `${input.dedupeKey}:${channel}`
         : `${input.userId}:${input.eventKey}:${subject}:${channel}`.slice(0, 190);
@@ -116,7 +124,12 @@ export class NotificationsService {
           tone: event.tone,
           dedupeKey,
           status: 'pending',
-          isSimulated: this.config.messaging.smsProvider === 'mock' || this.config.messaging.emailProvider === 'mock',
+          isSimulated:
+            channel === 'push'
+              ? this.smsGateway.isPushSimulated
+              : channel === 'sms'
+                ? this.smsGateway.isSmsSimulated
+                : this.config.messaging.emailProvider === 'mock',
         }),
       ).catch((error) => {
         if (String(error).includes('UNIQUE') || String(error).includes('duplicate')) return null;
@@ -136,6 +149,48 @@ export class NotificationsService {
     }
 
     return { created: created.length, duplicated, notifications: created };
+  }
+
+  /* ------------------------- توکن دستگاه (اعلان فشاری) ------------------------- */
+
+  async registerDeviceToken(
+    userId: string,
+    input: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'web' | null },
+  ): Promise<DeviceToken> {
+    const existing = await this.deviceTokens.findOne({ where: { token: input.token } });
+    const now = new Date();
+    if (existing) {
+      // توکن ممکن است به کاربر دیگری منتقل شده باشد (نصب جدید) — مالکیت به‌روز می‌شود
+      existing.userId = userId;
+      existing.platform = input.platform;
+      existing.appFlavor = input.appFlavor ?? existing.appFlavor;
+      existing.isActive = true;
+      existing.lastSeenAt = now;
+      return this.deviceTokens.save(existing);
+    }
+    return this.deviceTokens.save(
+      this.deviceTokens.create({
+        userId,
+        token: input.token.slice(0, 512),
+        platform: input.platform,
+        appFlavor: input.appFlavor ?? null,
+        isActive: true,
+        lastSeenAt: now,
+      }),
+    );
+  }
+
+  async unregisterDeviceToken(userId: string, token: string): Promise<boolean> {
+    const result = await this.deviceTokens.update({ userId, token }, { isActive: false });
+    return (result.affected ?? 0) > 0;
+  }
+
+  async listDeviceTokens(userId: string): Promise<DeviceToken[]> {
+    return this.deviceTokens.find({ where: { userId, isActive: true }, order: { lastSeenAt: 'DESC' } });
+  }
+
+  async activeDeviceTokens(userId: string): Promise<DeviceToken[]> {
+    return this.deviceTokens.find({ where: { userId, isActive: true } });
   }
 
   private prepareVars(vars: Record<string, unknown>, moneyVars: string[]): Record<string, unknown> {

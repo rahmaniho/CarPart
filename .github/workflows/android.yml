@@ -1,0 +1,57 @@
+# ساخت APKهای اندروید (دو Flavor) در CI — چون ساخت محلی نیازمند Android SDK است
+name: Android
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+
+      - name: بیلد قرارداد و کلاینت
+        run: |
+          npm run build:contract
+          npm run build -w @carpart/api-client
+
+      - name: بیلد وب‌اپ موبایل
+        run: npm run build -w @carpart/mobile
+
+      - name: همگام‌سازی Capacitor
+        working-directory: apps/mobile
+        run: npx cap sync android
+
+      - name: پذیرش مجوزهای Android SDK
+        working-directory: apps/mobile/android
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: ساخت APK (مکانیک + پیک)
+        working-directory: apps/mobile/android
+        run: ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug
+
+      - name: بارگذاری APKها
+        uses: actions/upload-artifact@v4
+        with:
+          name: carpart-android-apks
+          path: |
+            apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
+          if-no-files-found: error
