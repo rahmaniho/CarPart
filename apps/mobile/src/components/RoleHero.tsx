@@ -10,29 +10,24 @@ interface RoleHeroProps {
   metric?: ReactNode;
 }
 
-const palette = {
-  mechanic: { accent: '#22d3ee', soft: '#0e7490' },
-  seller: { accent: '#fbbf24', soft: '#d97706' },
-  courier: { accent: '#a78bfa', soft: '#7c3aed' },
-  admin: { accent: '#60a5fa', soft: '#2563eb' },
+const BRAND_ART: Partial<Record<RoleHeroProps['variant'], string>> = {
+  mechanic: '/branding/mechanic.webp',
+  seller: '/branding/seller.webp',
+  courier: '/branding/courier.webp',
 };
 
-/** گرافیک برداری سبک؛ بدون درخواست شبکه و مناسب نمایشگرهای با تراکم بالا. */
+/** لوگوی نقش با نسخهٔ بهینهٔ WebP؛ مدیریت فعلاً نشان برداری داخلی دارد. */
 function RoleArtwork({ variant }: { variant: RoleHeroProps['variant'] }): JSX.Element {
-  const color = palette[variant];
-  const glyph = variant === 'mechanic' ? 'M12 7h28M18 15h16M10 23h30M17 31h17' : variant === 'seller' ? 'M12 17h28l-3-8H15l-3 8Zm4 0v18h20V17M22 35V24h8v11' : variant === 'courier' ? 'M10 29h8l4-15h13l5 15h4M21 29h15M16 34a3 3 0 1 0 0 .1M39 34a3 3 0 1 0 0 .1' : 'M11 12h34v25H11zM17 31l6-7 6 4 8-10 3 3M18 42h20';
-
+  const source = BRAND_ART[variant];
+  if (source) {
+    return <img className="role-art role-art--brand" src={source} width="160" height="160" alt="" aria-hidden="true" decoding="async" />;
+  }
   return (
     <svg className="role-art" viewBox="0 0 56 56" aria-hidden="true">
-      <defs>
-        <linearGradient id={`role-gradient-${variant}`} x1="0" y1="0" x2="1" y2="1">
-          <stop stopColor={color.accent} />
-          <stop offset="1" stopColor={color.soft} />
-        </linearGradient>
-      </defs>
+      <defs><linearGradient id="role-gradient-admin" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#60a5fa" /><stop offset="1" stopColor="#2563eb" /></linearGradient></defs>
       <circle cx="28" cy="28" r="25" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.16)" />
-      <path d={glyph} fill="none" stroke={`url(#role-gradient-${variant})`} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <circle className="role-art-dot" cx="45" cy="10" r="3" fill={color.accent} />
+      <path d="M11 12h34v25H11zM17 31l6-7 6 4 8-10 3 3M18 42h20" fill="none" stroke="url(#role-gradient-admin)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <circle className="role-art-dot" cx="45" cy="10" r="3" fill="#60a5fa" />
     </svg>
   );
 }

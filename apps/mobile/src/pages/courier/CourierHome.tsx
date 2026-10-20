@@ -8,6 +8,7 @@ import { getCurrentPosition, watchPosition } from '../../lib/native';
 import { formatToman, toFaDigits } from '../../lib/format';
 import { AppShell, type TabDef } from '../../components/AppShell';
 import { EmptyState, ErrorBox, Section, Spinner } from '../../components/ui';
+import { RoleHero } from '../../components/RoleHero';
 
 export const COURIER_TABS: TabDef[] = [
   { to: '/courier', label: 'مأموریت‌ها', icon: '🛵' },
@@ -127,6 +128,13 @@ export default function CourierHome(): JSX.Element {
         </button>
       }
     >
+      <RoleHero
+        variant="courier"
+        eyebrow={isOnline ? 'آمادهٔ دریافت مأموریت' : 'وضعیت فعالیت: آفلاین'}
+        title="ارسال سریع، درآمد شفاف"
+        description="پیشنهادهای نزدیک را ببینید، مسیر را مدیریت کنید و سهم هر مأموریت را پیش از پذیرش بدانید."
+        metric={`${toFaDigits(active.data?.meta.total ?? 0)} مأموریت فعال`}
+      />
       {error ? <ErrorBox message={error} /> : null}
 
       {isOnline ? (
