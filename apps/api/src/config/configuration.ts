@@ -72,6 +72,8 @@ export interface AppConfig {
     limit: number;
     authTtlSeconds: number;
     authLimit: number;
+    /** اگر true باشد، محدودسازی نرخ کاملاً غیرفعال است (فقط تست) */
+    disabled: boolean;
   };
   business: {
     commissionPercent: number;
@@ -163,6 +165,7 @@ export function buildConfig(env: Env): AppConfig {
       limit: env.THROTTLE_LIMIT,
       authTtlSeconds: env.THROTTLE_AUTH_TTL_SECONDS,
       authLimit: env.THROTTLE_AUTH_LIMIT,
+      disabled: env.THROTTLE_DISABLED,
     },
     business: {
       commissionPercent: env.DEFAULT_COMMISSION_PERCENT,

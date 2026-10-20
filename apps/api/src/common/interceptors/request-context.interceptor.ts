@@ -2,7 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } fr
 import type { Request, Response } from 'express';
 import { Observable, tap } from 'rxjs';
 import { randomUUID } from 'node:crypto';
-import { requestStorage } from '../context/request-context';
+import { getRequestContext, requestStorage } from '../context/request-context';
 import { redact } from '../utils/text';
 
 const SENSITIVE_KEYS = ['password', 'token', 'refreshToken', 'accessToken', 'otp', 'code', 'cardNumber', 'secret'];
@@ -19,7 +19,11 @@ function sanitize(value: unknown, depth = 0): unknown {
   return out;
 }
 
-/** ایجاد شناسه درخواست، نگهداری زمینه در AsyncLocalStorage و ثبت لاگ دسترسی. */
+/**
+ * ثبت لاگ دسترسی و تکمیل زمینه درخواست.
+ * شناسه درخواست توسط میان‌افزار `requestContextMiddleware` ساخته می‌شود (پیش از گاردها)؛
+ * این رهگیر تنها در نبود آن زمینه، زمینه جدید می‌سازد.
+ */
 @Injectable()
 export class RequestContextInterceptor implements NestInterceptor {
   private readonly logger = new Logger('HTTP');
@@ -28,10 +32,25 @@ export class RequestContextInterceptor implements NestInterceptor {
     const http = context.switchToHttp();
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
-    const requestId = (request.headers['x-request-id'] as string) ?? randomUUID();
-    const startedAt = Date.now();
+    const existing = getRequestContext();
+    const requestId = existing?.requestId ?? ((request.headers['x-request-id'] as string) ?? randomUUID());
+    const startedAt = existing?.startedAt ?? Date.now();
 
     response.setHeader('X-Request-Id', requestId);
+
+    if (existing) {
+      return new Observable((subscriber) => {
+        next
+          .handle()
+          .pipe(
+            tap({
+              next: () => this.log(request, response, startedAt, requestId),
+              error: (error) => this.logError(request, error, startedAt, requestId),
+            }),
+          )
+          .subscribe(subscriber);
+      });
+    }
 
     return new Observable((subscriber) => {
       requestStorage.run({ requestId, method: request.method, path: request.originalUrl, startedAt }, () => {
@@ -40,19 +59,19 @@ export class RequestContextInterceptor implements NestInterceptor {
           .pipe(
             tap({
               next: () => this.log(request, response, startedAt, requestId),
-              error: (error) => {
-                const status = (error as { getStatus?: () => number }).getStatus?.() ?? 500;
-                if (status < 500) {
-                  this.logger.warn(
-                    `${request.method} ${request.originalUrl} → ${status} (${Date.now() - startedAt}ms) [${redact(requestId, 8)}]`,
-                  );
-                }
-              },
+              error: (error) => this.logError(request, error, startedAt, requestId),
             }),
           )
           .subscribe(subscriber);
       });
     });
+  }
+
+  private logError(request: Request, error: unknown, startedAt: number, requestId: string): void {
+    const status = (error as { getStatus?: () => number }).getStatus?.() ?? 500;
+    if (status < 500) {
+      this.logger.warn(`${request.method} ${request.originalUrl} → ${status} (${Date.now() - startedAt}ms) [${redact(requestId, 8)}]`);
+    }
   }
 
   private log(request: Request, response: Response, startedAt: number, requestId: string): void {

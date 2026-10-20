@@ -179,13 +179,18 @@ export class QuotesService {
       eventKey: 'request.quote_received',
       subjectId: request.id,
       vars: {
+        // نام متغیرها باید با قالب رویداد ({sellerName}, {id}) یکی باشد
+        id: request.id,
         title: request.titleFa,
-        storeName: seller.storeName,
+        sellerName: seller.storeName,
         total: saved.total,
         validUntil: formatJalali(saved.validUntil ?? now, { withTime: true }),
       },
       moneyVars: ['total'],
       data: { requestId: request.id, quoteId: saved.id },
+      // هر پیشنهاد یک اعلان مستقل می‌گیرد؛ کلید یکتاسازی باید بر اساس شناسه پیشنهاد باشد،
+      // وگرنه پیشنهاد دوم همان درخواست هرگز اعلام نمی‌شد.
+      dedupeKey: `request.quote_received:${saved.id}`,
     });
 
     return this.getWithItems(saved.id);

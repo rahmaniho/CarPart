@@ -146,9 +146,21 @@ export class OrdersService {
       workshopId: workshop.id,
     });
 
-    if (!dto.saveAsDraft) await this.afterOrderCreated(order, userId);
-    else await this.recordEvent(order, null, 'DRAFT', 'ثبت پیش‌نویس سفارش', userId, 'mechanic');
+    if (dto.saveAsDraft) {
+      await this.recordEvent(order, null, 'DRAFT', 'ثبت پیش‌نویس سفارش', userId, 'mechanic');
+      return this.detailForUser(userId, order.id);
+    }
 
+    try {
+      await this.reserveStock(order, lines, userId);
+    } catch (error) {
+      // در صورت شکست رزرو موجودی، سفارش ناقص پاک می‌شود تا داده ناسازگار نماند
+      await this.items.delete({ orderId: order.id });
+      await this.orders.delete({ id: order.id });
+      throw error;
+    }
+
+    await this.afterOrderCreated(order, userId);
     return this.detailForUser(userId, order.id);
   }
 
@@ -720,11 +732,17 @@ export class OrdersService {
   }
 
   /** تغییر وضعیت توسط سامانه (پرداخت، زمان‌بندی، مأموریت ارسال). */
-  async systemTransition(orderId: string, to: OrderStatus, faDescription: string, meta?: Record<string, unknown>): Promise<Order> {
+  async systemTransition(
+    orderId: string,
+    to: OrderStatus,
+    faDescription: string,
+    meta?: Record<string, unknown>,
+    reason?: string,
+  ): Promise<Order> {
     const order = await this.loadOrder(orderId);
     const transition = this.stateMachine.assertAllowed(order.status, to, 'system');
     await this.stateMachine.runGuards(transition, { order, actor: 'system', meta });
-    await this.applyTransition(order, to, 'system', null, faDescription, null, meta);
+    await this.applyTransition(order, to, 'system', null, faDescription, reason ?? null, meta);
     await this.afterTransition(order, to, 'system', null);
     return order;
   }
@@ -878,7 +896,7 @@ export class OrdersService {
         dedupeKey: `order.paid.seller:${order.id}`,
       });
     }
-    const prepTimeout = await this.settings.getNumber('order.seller_prep_timeout_minutes', 120);
+    const prepTimeout = await this.settings.getNumber('order.preparation_timeout_minutes', 120);
     await this.jobs.enqueue(
       'order.seller_timeout',
       { orderId: order.id },
@@ -955,9 +973,7 @@ export class OrdersService {
     if (!order || order.status !== 'WAITING_FOR_PAYMENT') return false;
     const minutes = await this.settings.getNumber('order.payment_expire_minutes', 15);
     if (now.getTime() - order.createdAt.getTime() < minutes * 60_000) return false;
-    await this.systemTransition(order.id, 'CANCELLED', 'لغو خودکار به‌دلیل انقضای مهلت پرداخت');
-    order.cancelReason = 'انقضای مهلت پرداخت';
-    await this.orders.save(order);
+    await this.systemTransition(order.id, 'CANCELLED', 'لغو خودکار به‌دلیل انقضای مهلت پرداخت', undefined, 'انقضای مهلت پرداخت');
     return true;
   }
 
@@ -979,9 +995,7 @@ export class OrdersService {
     let count = 0;
     for (const order of orders) {
       try {
-        await this.systemTransition(order.id, 'CANCELLED', 'لغو خودکار به‌دلیل انقضای مهلت پرداخت');
-        order.cancelReason = 'انقضای مهلت پرداخت';
-        await this.orders.save(order);
+        await this.systemTransition(order.id, 'CANCELLED', 'لغو خودکار به‌دلیل انقضای مهلت پرداخت', undefined, 'انقضای مهلت پرداخت');
         count += 1;
       } catch (error) {
         this.logger.warn(`لغو خودکار سفارش ${order.code} ناموفق بود: ${(error as Error).message}`);
@@ -1009,7 +1023,7 @@ export class OrdersService {
 
   /** یادآوری آماده‌سازی به فروشنده در صورت عدم تأیید. */
   async remindUnconfirmed(now = new Date()): Promise<number> {
-    const minutes = await this.settings.getNumber('order.seller_prep_timeout_minutes', 120);
+    const minutes = await this.settings.getNumber('order.preparation_timeout_minutes', 120);
     const from = new Date(now.getTime() - (minutes + 15) * 60_000);
     const to = new Date(now.getTime() - minutes * 60_000);
     const orders = await this.orders.find({ where: { status: In(['PAID', 'SELLER_CONFIRMED']), paidAt: Between(from, to) }, take: 100 });

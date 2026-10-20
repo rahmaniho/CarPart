@@ -1,14 +1,13 @@
 import 'reflect-metadata';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import cookieParser from 'cookie-parser';
 import { DataSource } from 'typeorm';
-import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { CONFIG_TOKEN, type AppConfig } from './config/configuration';
 import { seedDatabase } from './database/seed';
+import { configureApp } from './common/http/configure-app';
 
 /**
  * راه‌اندازی سرویس API.
@@ -24,36 +23,8 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get<AppConfig>(CONFIG_TOKEN);
 
-  app.set('trust proxy', 1);
-  app.use(
-    helmet({
-      contentSecurityPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-    }),
-  );
-  app.use(cookieParser());
-
-  app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/ready'] });
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: false },
-      validationError: { target: false, value: false },
-    }),
-  );
-
-  app.enableCors({
-    origin: config.app.corsOrigins.length ? config.app.corsOrigins : true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Idempotency-Key', 'X-Request-Id'],
-    exposedHeaders: ['X-Request-Id'],
-  });
-
-  app.enableShutdownHooks();
+  // پیکربندی مشترک با تست‌های سرتاسری: helmet، کوکی‌پارسر، پیشوند مسیر، اعتبارسنجی و CORS
+  configureApp(app, config);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('کارپارت — API')

@@ -411,7 +411,7 @@ export class SellerProductsService {
         userId: seller.userId,
         eventKey: 'inventory.low_stock',
         subjectId: product.id,
-        vars: { productName: product.part?.nameFa ?? product.searchKey ?? 'محصول', stock: product.availableStock },
+        vars: { productId: product.id, productName: product.part?.nameFa ?? product.searchKey ?? 'محصول', stock: product.availableStock },
         dedupeKey: `low-stock:${product.id}:${product.stockUpdatedAt?.getTime() ?? Date.now()}`,
       })
       .catch((error) => this.logger.warn(`ارسال اعلان موجودی کم ناموفق بود: ${(error as Error).message}`));

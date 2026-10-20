@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, IsNull, Repository } from 'typeorm';
+import { PAYOUT_STATUS_META } from '@carpart/contract';
 import type { PayoutRecipientType, PayoutStatus } from '@carpart/contract';
 import { AppException, ErrorCodes, NotFoundException } from '../../common/errors/app-error';
 import { buildPage, toSkipTake, type PageResult } from '../../common/dto/pagination.dto';
@@ -313,7 +314,7 @@ export class PayoutsService {
         userId,
         eventKey: 'payout.created',
         subjectId: payout.id,
-        vars: { code: payout.code, amount: payout.netAmount, payoutId: payout.id },
+        vars: { code: payout.code, amount: payout.netAmount, payoutId: payout.id, status: PAYOUT_STATUS_META[payout.status]?.fa ?? payout.status },
         moneyVars: ['amount'],
         data: { payoutId: payout.id },
       })

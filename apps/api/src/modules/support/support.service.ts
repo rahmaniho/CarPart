@@ -268,7 +268,7 @@ export class SupportService {
         userId: order.userId,
         eventKey: 'return.requested',
         subjectId: entity.id,
-        vars: { code: entity.code, returnId: entity.id, amount: refundAmount },
+        vars: { code: order.code, returnCode: entity.code, returnId: entity.id, amount: refundAmount },
         moneyVars: ['amount'],
         data: { returnId: entity.id },
       })
@@ -378,7 +378,7 @@ export class SupportService {
         userId: entity.userId,
         eventKey: 'return.status_changed',
         subjectId: entity.id,
-        vars: { code: entity.code, returnId: entity.id, status: message },
+        vars: { returnCode: entity.code, returnId: entity.id, status: message },
         data: { returnId: entity.id },
       })
       .catch(() => undefined);

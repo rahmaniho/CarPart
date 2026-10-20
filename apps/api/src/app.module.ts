@@ -53,6 +53,8 @@ import { WorkshopsModule } from './modules/workshops/workshops.module';
     ThrottlerModule.forRootAsync({
       inject: [CONFIG_TOKEN],
       useFactory: (config: AppConfig) => ({
+        // فقط در محیط تست (THROTTLE_DISABLED=true) محدودسازی نرخ کنار گذاشته می‌شود
+        skipIf: () => config.throttle.disabled,
         throttlers: [
           {
             ttl: config.throttle.ttlSeconds * 1000,

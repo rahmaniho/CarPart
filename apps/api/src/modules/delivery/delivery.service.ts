@@ -259,7 +259,9 @@ export class DeliveryService {
         pickup: saved.pickupPoint.title ?? 'فروشگاه',
         dropoff: saved.dropoffPoint.city ?? 'محل تحویل',
         fee: saved.courierShare,
-        deadline: timeoutMinutes,
+        // مسافت از سرویس نقشه می‌آید و در حالت تخمین، تقریبی اعلام می‌شود (بدون ادعای دقت کاذب)
+        distance: next.distanceKm === null || next.distanceKm === undefined ? 'نامشخص' : `${next.distanceKm.toFixed(1)} کیلومتر`,
+        deadline: `${timeoutMinutes} دقیقه`,
       },
       moneyVars: ['fee'],
       data: { deliveryId: saved.id },
@@ -284,7 +286,7 @@ export class DeliveryService {
           userId: order.userId,
           eventKey: 'delivery.no_courier',
           subjectId: order.id,
-          vars: { code: order.code, orderId: order.id, reason },
+          vars: { code: order.code, orderId: order.id, deliveryId: saved.id, deliveryCode: saved.code, reason },
           data: { orderId: order.id, deliveryId: saved.id },
         })
         .catch(() => undefined);
@@ -298,9 +300,9 @@ export class DeliveryService {
         await this.notifications
           .notify({
             userId: admin.id,
-            eventKey: 'delivery.no_courier',
-            subjectId: order.id,
-            vars: { code: order.code, orderId: order.id, reason },
+            eventKey: 'delivery.no_courier.admin',
+            subjectId: saved.id,
+            vars: { code: order.code, orderId: order.id, deliveryId: saved.id, deliveryCode: saved.code, reason },
             data: { orderId: order.id, deliveryId: saved.id },
             dedupeKey: `delivery.no_courier.admin:${saved.id}:${admin.id}`,
           })
@@ -385,7 +387,7 @@ export class DeliveryService {
           userId: order.userId,
           eventKey: 'delivery.accepted',
           subjectId: order.id,
-          vars: { code: order.code, orderId: order.id, eta: saved.estimatedMinutes ?? 'نامشخص' },
+          vars: { code: order.code, orderId: order.id, courierName: user.fullName ?? 'پیک', eta: saved.estimatedMinutes ?? 'نامشخص' },
           data: { orderId: order.id, deliveryId: saved.id },
         })
         .catch(() => undefined);

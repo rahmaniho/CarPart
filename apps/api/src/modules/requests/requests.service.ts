@@ -145,6 +145,7 @@ export class RequestsService {
       eventKey: 'request.created',
       subjectId: saved.id,
       vars: {
+        id: saved.id,
         title: saved.titleFa,
         code: saved.code,
         sellerCount: new Set(targets.map((t) => t.sellerId)).size,
@@ -232,6 +233,7 @@ export class RequestsService {
           eventKey: 'request.broadcast',
           subjectId: request.id,
           vars: {
+            id: request.id,
             title: request.titleFa,
             quantity: request.quantity,
             urgency: request.urgency,

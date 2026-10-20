@@ -8,7 +8,7 @@ import { CONFIG_TOKEN, type AppConfig } from '../../config/configuration';
 import { JobQueueService } from '../jobs/job-queue.service';
 import { SystemSettingsService } from '../settings/system-settings.service';
 import { Notification } from './entities/notification.entity';
-import { getEvent, renderTemplate } from './notification-events';
+import { getEvent, missingVarsOf, renderTemplate } from './notification-events';
 
 export interface NotifyInput {
   userId: string;
@@ -68,6 +68,11 @@ export class NotificationsService {
     const channels = requested.filter((channel) => channel !== 'push' && enabledChannels[channel] !== false);
 
     const vars = this.prepareVars(input.vars ?? {}, input.moneyVars ?? []);
+    const missing = missingVarsOf(event, vars);
+    if (missing.length) {
+      // هشدار توسعه‌دهنده: کاربر نباید متن/لینک با جای‌خالی «—» ببیند
+      this.logger.warn(`رویداد اعلان ${event.key} با متغیرهای ناموجود فراخوانی شد: ${missing.join(', ')}`);
+    }
     const title = renderTemplate(event.titleFa, vars);
     const body = renderTemplate(event.bodyFa, vars);
     const link = event.link ? renderTemplate(event.link, vars) : null;

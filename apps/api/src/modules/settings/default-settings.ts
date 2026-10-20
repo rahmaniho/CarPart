@@ -124,10 +124,12 @@ export const DEFAULT_SETTINGS: DefaultSetting[] = [
     faLabel: 'مهلت پاسخ برای درخواست فوری (دقیقه)',
     constraints: { min: 3, max: 240 },
   },
+  { key: 'search.max_candidates', group: 'search', valueType: 'number', value: 300, faLabel: 'حداکثر نامزد بررسی‌شده در هر جست‌وجو', description: 'برای حفظ پاسخ‌دهی، رتبه‌بندی دقیق روی این تعداد از بهترین نامزدها انجام می‌شود.', constraints: { min: 50, max: 2000 } },
   { key: 'request.quote.max_target_sellers', group: 'request', valueType: 'number', value: 12, faLabel: 'حداکثر فروشندگان هدف هر درخواست', constraints: { min: 1, max: 100 } },
   { key: 'request.quote.validity_minutes', group: 'request', valueType: 'number', value: 60, faLabel: 'اعتبار پیشنهاد قیمت (دقیقه)', constraints: { min: 5, max: 1440 } },
 
   // --- سفارش ---
+  { key: 'order.payment_expire_minutes', group: 'order', valueType: 'number', value: 15, faLabel: 'مهلت پرداخت سفارش (دقیقه)', description: 'پس از این مهلت، سفارش پرداخت‌نشده به‌صورت خودکار لغو و موجودی آزاد می‌شود.', constraints: { min: 1, max: 240 } },
   { key: 'order.preparation_timeout_minutes', group: 'order', valueType: 'number', value: 120, faLabel: 'حداکثر زمان آماده‌سازی (دقیقه)', constraints: { min: 10, max: 2880 } },
   { key: 'order.auto_complete_hours', group: 'order', valueType: 'number', value: 48, faLabel: 'تکمیل خودکار پس از تحویل (ساعت)', constraints: { min: 1, max: 720 } },
   { key: 'order.refund_window_days', group: 'order', valueType: 'number', value: 3, faLabel: 'مهلت درخواست بازپرداخت (روز)', constraints: { min: 0, max: 30 } },

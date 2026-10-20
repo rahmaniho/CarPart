@@ -72,6 +72,8 @@ export const envSchema = z.object({
   THROTTLE_LIMIT: int(180),
   THROTTLE_AUTH_TTL_SECONDS: int(60),
   THROTTLE_AUTH_LIMIT: int(10),
+  /** غیرفعال‌سازی محدودسازی نرخ فقط برای محیط تست (پیش‌فرض: فعال در همه محیط‌های واقعی) */
+  THROTTLE_DISABLED: boolish.default(false),
 
   DEFAULT_COMMISSION_PERCENT: z.coerce.number().default(7),
   DEFAULT_DELIVERY_BASE_FEE: int(25000),

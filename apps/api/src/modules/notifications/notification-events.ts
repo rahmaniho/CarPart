@@ -148,7 +148,7 @@ export const NOTIFICATION_EVENTS: Record<string, NotificationEventDefinition> = 
   'delivery.offered': {
     key: 'delivery.offered',
     titleFa: 'مأموریت ارسال جدید',
-    bodyFa: 'مأموریت {code} — کرایه {fee}، مسافت {distance} کیلومتر. مهلت پذیرش: {deadline}',
+    bodyFa: 'مأموریت {code} — کرایه {fee}، مسافت تقریبی {distance}. مهلت پذیرش: {deadline}',
     channels: ['inapp', 'sms'],
     tone: 'info',
     link: '/courier/missions/{deliveryId}',
@@ -189,9 +189,17 @@ export const NOTIFICATION_EVENTS: Record<string, NotificationEventDefinition> = 
   'delivery.no_courier': {
     key: 'delivery.no_courier',
     titleFa: 'پیک واجد شرایط یافت نشد',
-    bodyFa: 'برای مأموریت {code} پیک آنلاینی در محدوده پیدا نشد. موضوع به اپراتور ارجاع شد.',
+    bodyFa: 'برای سفارش {code} در حال حاضر پیک آنلاینی در محدوده پیدا نشد. موضوع به پشتیبانی ارجاع شد و وضعیت از همین صفحه پیگیری می‌شود.',
     channels: ['inapp'],
     tone: 'warning',
+    link: '/mechanic/orders/{orderId}',
+  },
+  'delivery.no_courier.admin': {
+    key: 'delivery.no_courier.admin',
+    titleFa: 'مأموریت بدون پیک ماند',
+    bodyFa: 'مأموریت {deliveryCode} برای سفارش {code} بدون پیک ماند. دلیل: {reason}',
+    channels: ['inapp'],
+    tone: 'danger',
     link: '/admin/deliveries/{deliveryId}',
   },
   'account.verified': {
@@ -211,7 +219,7 @@ export const NOTIFICATION_EVENTS: Record<string, NotificationEventDefinition> = 
   'return.requested': {
     key: 'return.requested',
     titleFa: 'درخواست مرجوعی ثبت شد',
-    bodyFa: 'برای سفارش {code} درخواست مرجوعی با کد {returnCode} ثبت شد.',
+    bodyFa: 'برای سفارش {code} درخواست مرجوعی با کد {returnCode} و مبلغ بازپرداخت {amount} ثبت شد.',
     channels: ['inapp'],
     tone: 'warning',
     link: '/seller/returns/{returnId}',
@@ -264,6 +272,30 @@ export function renderTemplate(template: string, vars: Record<string, unknown> =
     const value = vars[key];
     return value === undefined || value === null ? '—' : String(value);
   });
+}
+
+/** فهرست متغیرهای `{name}` به‌کاررفته در یک یا چند قالب. */
+export function templateVars(...templates: Array<string | null | undefined>): string[] {
+  const found = new Set<string>();
+  for (const template of templates) {
+    if (!template) continue;
+    for (const match of template.matchAll(/\{(\w+)\}/g)) found.add(match[1]);
+  }
+  return [...found];
+}
+
+/**
+ * متغیرهای لازم یک رویداد (از قالب عنوان، متن و لینک استخراج می‌شود).
+ * برای تشخیص زودهنگام خطای «نام متغیر اشتباه در فراخوانی notify» استفاده می‌شود؛
+ * چنین خطایی پیش‌تر باعث شد لینک اعلان پیشنهاد قیمت به `/mechanic/requests/—/quotes` تبدیل شود.
+ */
+export function requiredVarsOf(event: NotificationEventDefinition): string[] {
+  return templateVars(event.titleFa, event.bodyFa, event.link);
+}
+
+/** متغیرهای موردنیاز رویداد که در `vars` ارائه نشده‌اند (یا مقدارشان null/undefined است). */
+export function missingVarsOf(event: NotificationEventDefinition, vars: Record<string, unknown>): string[] {
+  return requiredVarsOf(event).filter((key) => vars[key] === undefined || vars[key] === null || vars[key] === '');
 }
 
 export function getEvent(key: string): NotificationEventDefinition | undefined {
