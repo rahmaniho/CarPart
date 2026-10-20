@@ -31,7 +31,7 @@ gh run download --name carpart-android-apks
 ```
 
 ### ۲) محلی
-پیش‌نیاز: **JDK 17** + **Android SDK** (compileSdk 35) + Gradle (wrapper موجود است)
+پیش‌نیاز: **JDK 21** + **Android SDK** (compileSdk 35) + Gradle (wrapper موجود است)
 ```bash
 ./scripts/build-android.sh
 # یا مستقیم:

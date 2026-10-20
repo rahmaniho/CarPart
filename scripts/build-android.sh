@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ساخت APKهای اندروید کارپارت (دو Flavor: mechanic و courier)
-# پیش‌نیاز: JDK 17 + Android SDK (compileSdk 35) — مطابق apps/mobile/ANDROID.md
+# پیش‌نیاز: JDK 21 + Android SDK (compileSdk 35) — مطابق apps/mobile/ANDROID.md
 set -euo pipefail
 
 cd "$(dirname "$0")/../apps/mobile"
