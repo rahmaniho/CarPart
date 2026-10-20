@@ -99,7 +99,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .role-hero__eyebrow { @apply flex items-center gap-2 text-[10px] font-black tracking-wider text-white/60; }
 .role-hero__pulse { @apply h-2 w-2 rounded-full bg-emerald-400; box-shadow:0 0 0 5px rgb(52 211 153 / .12); }
 .role-art { @apply relative z-10 h-28 w-28 shrink-0; filter: drop-shadow(0 14px 16px rgb(0 0 0 / .22)); }
+.role-art--brand { @apply h-32 w-32 object-contain; border-radius: 1.65rem; }
 .role-art-dot { transform-origin:center; animation: rolePulse 2.5s ease-in-out infinite; }
+@media (max-width: 370px) { .role-art--brand { width: 6.5rem; height: 6.5rem; } }
 
 input, select, textarea { font-size: 16px; }
 .tabular-nums { font-variant-numeric: tabular-nums; }

@@ -2,6 +2,15 @@
 
 تمام تغییرات مهم محصول در این فایل ثبت می‌شوند. نسخه‌بندی بر اساس Semantic Versioning است.
 
+## [1.2.1] — ۱۴۰۵/۰۷/۲۹
+
+### هویت بصری نقش‌ها
+- جایگزینی لوگوی رسمی ارسالی کاربر برای مکانیک/خریدار، فروشنده و پیک
+- تولید آیکن‌های Android در پنج density برای legacy، round و adaptive icon
+- تولید Splash اختصاصی هر Flavor با حفظ نسبت تصویر و safe area
+- افزودن تصاویر WebP کم‌حجم به Hero صفحهٔ هر نقش و آیکن میانبرهای PWA
+- حذف هوشمند حاشیهٔ سفید منبع و استفاده از شفافیت واقعی در launcher icon
+
 ## [1.2.0] — ۱۴۰۵/۰۷/۲۹
 
 ### تجربه و طراحی
@@ -53,6 +62,7 @@
 - قرارداد و API client مشترک TypeScript
 - Docker، CI، تست‌ها و مستندات استقرار/امنیت
 
+[1.2.1]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.2.1
 [1.2.0]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.2.0
 [1.1.0]: https://github.com/rahmaniho/CarPart/releases/tag/android-v1.1.0
 [1.0.0]: https://github.com/rahmaniho/CarPart/releases/tag/v1.0.0

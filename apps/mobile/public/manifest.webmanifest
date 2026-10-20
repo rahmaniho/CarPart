@@ -14,9 +14,9 @@
   "orientation": "portrait",
   "categories": ["business", "shopping", "productivity"],
   "shortcuts": [
-    { "name": "اپ مکانیک", "short_name": "مکانیک", "url": "/mechanic" },
-    { "name": "پنل فروشنده", "short_name": "فروشنده", "url": "/seller" },
-    { "name": "اپ پیک", "short_name": "پیک", "url": "/courier" },
+    { "name": "اپ مکانیک", "short_name": "مکانیک", "url": "/mechanic", "icons": [{ "src": "/branding/mechanic-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "پنل فروشنده", "short_name": "فروشنده", "url": "/seller", "icons": [{ "src": "/branding/seller-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "اپ پیک", "short_name": "پیک", "url": "/courier", "icons": [{ "src": "/branding/courier-192.png", "sizes": "192x192", "type": "image/png" }] },
     { "name": "مرکز مدیریت", "short_name": "مدیریت", "url": "/admin" }
   ],
   "icons": [
