@@ -256,7 +256,7 @@ export const NOTIFICATION_CHANNEL_META: LabeledStatus<NotificationChannel> = {
   inapp: { fa: 'اعلان درون‌برنامه‌ای', tone: 'success' },
   sms: { fa: 'پیامک', tone: 'warning', hint: 'در این نسخه آزمایشی است' },
   email: { fa: 'ایمیل', tone: 'warning', hint: 'در این نسخه آزمایشی است' },
-  push: { fa: 'اعلان مرورگر', tone: 'neutral', hint: 'پیاده‌سازی نشده' },
+  push: { fa: 'اعلان فشاری', tone: 'info', hint: 'در استقرارهای بدون FCM شبیه‌سازی می‌شود' },
 };
 
 export const JOB_STATUSES = ['queued', 'running', 'done', 'failed', 'cancelled'] as const;

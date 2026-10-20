@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { NotificationChannel } from '@carpart/contract';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -33,6 +33,34 @@ export class NotificationsController {
   @ApiOperation({ summary: 'تعداد اعلان‌های خوانده‌نشده' })
   async unreadCount(@CurrentUser() user: RequestUser) {
     return { count: await this.notifications.unreadCount(user.id) };
+  }
+
+  @Get('device-tokens')
+  @ApiOperation({ summary: 'فهرست توکن‌های دستگاه فعال برای اعلان فشاری' })
+  async deviceTokens(@CurrentUser() user: RequestUser) {
+    const tokens = await this.notifications.listDeviceTokens(user.id);
+    return tokens.map((entry) => ({ id: entry.id, platform: entry.platform, appFlavor: entry.appFlavor, lastSeenAt: entry.lastSeenAt }));
+  }
+
+  @Post('device-tokens')
+  @ApiOperation({ summary: 'ثبت/به‌روزرسانی توکن دستگاه برای اعلان فشاری (FCM)' })
+  async registerDevice(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'web' },
+  ) {
+    const entry = await this.notifications.registerDeviceToken(user.id, {
+      token: String(dto.token ?? ''),
+      platform: dto.platform,
+      appFlavor: dto.appFlavor ?? null,
+    });
+    return { id: entry.id, platform: entry.platform, appFlavor: entry.appFlavor };
+  }
+
+  @Delete('device-tokens/:token')
+  @ApiOperation({ summary: 'حذف توکن دستگاه (مثلاً هنگام خروج از حساب)' })
+  async unregisterDevice(@CurrentUser() user: RequestUser, @Param('token') token: string) {
+    const removed = await this.notifications.unregisterDeviceToken(user.id, decodeURIComponent(token));
+    return { removed };
   }
 
   @Post(':id/read')

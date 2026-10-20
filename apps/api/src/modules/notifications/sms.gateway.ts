@@ -7,6 +7,9 @@ import type { ProviderHealth } from './channels/sms-provider.interface';
 import { MockEmailProvider } from './channels/mock-email.provider';
 import { SmtpEmailProvider } from './channels/smtp-email.provider';
 import type { EmailProvider } from './channels/email-provider.interface';
+import { MockPushProvider } from './channels/mock-push.provider';
+import { FcmPushProvider } from './channels/fcm-push.provider';
+import type { PushProvider } from './channels/push-provider.interface';
 
 /**
  * دروازه ارسال پیام کوتاه و ایمیل.
@@ -18,6 +21,7 @@ export class SmsGateway {
   private readonly logger = new Logger(SmsGateway.name);
   private readonly smsProviders: Map<string, SmsProvider>;
   private readonly emailProviders: Map<string, EmailProvider>;
+  private readonly pushProviders: Map<string, PushProvider>;
 
   constructor(@Inject(CONFIG_TOKEN) private readonly config: AppConfig) {
     this.smsProviders = new Map<string, SmsProvider>([
@@ -28,6 +32,10 @@ export class SmsGateway {
     this.emailProviders = new Map<string, EmailProvider>([
       ['mock', new MockEmailProvider()],
       ['smtp', new SmtpEmailProvider(() => config.messaging.smtpUrl)],
+    ]);
+    this.pushProviders = new Map<string, PushProvider>([
+      ['mock', new MockPushProvider()],
+      ['fcm', new FcmPushProvider(() => config.messaging.fcmServerKey)],
     ]);
   }
 
@@ -41,6 +49,18 @@ export class SmsGateway {
 
   get isSmsSimulated(): boolean {
     return !this.smsProvider.isLive;
+  }
+
+  get pushProvider(): PushProvider {
+    return this.pushProviders.get(this.config.messaging.pushProvider) ?? this.pushProviders.get('mock')!;
+  }
+
+  get isPushSimulated(): boolean {
+    return !this.pushProvider.isLive;
+  }
+
+  sendPush(input: { tokens: string[]; title: string; body: string; link?: string | null; data?: Record<string, unknown> | null }) {
+    return this.pushProvider.send(input);
   }
 
   sendSms(mobile: string, message: string, meta?: Record<string, unknown>) {

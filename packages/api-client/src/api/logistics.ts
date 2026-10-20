@@ -45,6 +45,9 @@ export interface NotificationsApi {
   unreadCount(): Promise<{ count: number }>;
   markRead(id: string): Promise<void>;
   markAllRead(): Promise<void>;
+  registerDeviceToken(input: { token: string; platform: 'android' | 'ios' | 'web'; appFlavor?: 'mechanic' | 'courier' | 'web' }): Promise<{ id: string; platform: string; appFlavor?: string | null }>;
+  unregisterDeviceToken(token: string): Promise<{ removed: boolean }>;
+  deviceTokens(): Promise<Array<{ id: string; platform: string; appFlavor?: string | null; lastSeenAt?: string | null }>>;
 }
 
 export function workshopsApi(http: Http): WorkshopsApi {
@@ -98,5 +101,8 @@ export function notificationsApi(http: Http): NotificationsApi {
     markAllRead: async () => {
       await http.post('/notifications/read-all');
     },
+    registerDeviceToken: (input) => http.post('/notifications/device-tokens', input),
+    unregisterDeviceToken: (token) => http.delete(`/notifications/device-tokens/${encodeURIComponent(token)}`),
+    deviceTokens: () => http.get('/notifications/device-tokens'),
   };
 }

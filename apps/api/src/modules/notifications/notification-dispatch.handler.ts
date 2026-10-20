@@ -76,6 +76,35 @@ export class NotificationDispatchHandler implements JobHandler, OnModuleInit {
         return;
       }
 
+      if (notification.channel === 'push') {
+        const tokens = await this.notifications.activeDeviceTokens(notification.userId);
+        if (!tokens.length) {
+          await this.notifications.updateDeliveryResult(notification.id, {
+            status: 'failed',
+            error: 'دستگاه فعالی برای دریافت اعلان فشاری ثبت نشده است.',
+            attempts,
+          });
+          return;
+        }
+        const result = await this.gateway.sendPush({
+          tokens: tokens.map((entry) => entry.token),
+          title: notification.titleFa,
+          body: notification.bodyFa ?? '',
+          link: notification.link,
+          data: notification.data,
+        });
+        if (result.status === 'failed') throw new Error(result.error ?? 'ارسال اعلان فشاری ناموفق بود.');
+        await this.notifications.updateDeliveryResult(notification.id, {
+          status: 'sent',
+          sentAt: new Date(),
+          attempts,
+          isSimulated: result.simulated,
+          error: null,
+          data: { ...(notification.data ?? {}), provider: result.provider, deliveredTokens: result.deliveredTokens.length },
+        });
+        return;
+      }
+
       await this.notifications.updateDeliveryResult(notification.id, { status: 'failed', error: `کانال پشتیبانی‌نشده: ${notification.channel}`, attempts });
     } catch (error) {
       const message = (error as Error).message;

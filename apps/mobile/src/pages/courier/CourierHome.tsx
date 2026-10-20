@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DeliveryMission } from '@carpart/api-client';
 import { api } from '../../lib/api';
 import { useCountdown } from '../../lib/hooks';
+import { getCurrentPosition } from '../../lib/native';
 import { formatToman, toFaDigits } from '../../lib/format';
 import { AppShell, type TabDef } from '../../components/AppShell';
 import { EmptyState, ErrorBox, Section, Spinner } from '../../components/ui';
@@ -86,18 +87,10 @@ export default function CourierHome(): JSX.Element {
   });
 
   const sendLocation = useMutation({
-    mutationFn: () =>
-      new Promise<{ lat: number; lng: number }>((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error('دسترسی موقعیت در این دستگاه در دسترس نیست'));
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
-          () => reject(new Error('دریافت موقعیت ممکن نشد؛ دسترسی مکان را بررسی کنید')),
-          { enableHighAccuracy: true, timeout: 10_000 },
-        );
-      }).then(({ lat, lng }) => api.couriers.sendLocation(lat, lng)),
+    mutationFn: async () => {
+      const position = await getCurrentPosition();
+      return api.couriers.sendLocation(position.lat, position.lng);
+    },
     onSuccess: () => setError(null),
     onError: (err) => setError(err instanceof Error ? err.message : 'ارسال موقعیت ناموفق بود'),
   });

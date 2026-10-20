@@ -21,6 +21,7 @@ import { Payout } from '../modules/finance/entities/payout.entity';
 import { IdempotencyRecord } from '../modules/idempotency/entities/idempotency-record.entity';
 import { Job } from '../modules/jobs/entities/job.entity';
 import { Notification } from '../modules/notifications/entities/notification.entity';
+import { DeviceToken } from '../modules/notifications/entities/device-token.entity';
 import { OrderEvent } from '../modules/orders/entities/order-event.entity';
 import { OrderItem } from '../modules/orders/entities/order-item.entity';
 import { Order } from '../modules/orders/entities/order.entity';
@@ -56,6 +57,7 @@ export const ENTITIES: Function[] = [
   SystemSetting,
   Announcement,
   Notification,
+  DeviceToken,
   Job,
   FileAsset,
   Workshop,

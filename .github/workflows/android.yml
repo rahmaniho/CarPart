@@ -1,0 +1,87 @@
+# ساخت APKهای اندروید (دو Flavor) در CI — چون ساخت محلی نیازمند Android SDK است
+name: Android
+
+permissions:
+  contents: write
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+
+      - name: بیلد قرارداد و کلاینت
+        run: |
+          npm run build:contract
+          npm run build -w @carpart/api-client
+
+      - name: بیلد وب‌اپ موبایل
+        run: npm run build -w @carpart/mobile
+
+      - name: همگام‌سازی Capacitor
+        working-directory: apps/mobile
+        run: npx cap sync android
+
+      - name: پذیرش مجوزهای Android SDK
+        working-directory: apps/mobile/android
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: ساخت APK (مکانیک + پیک)
+        working-directory: apps/mobile/android
+        run: |
+          set +e
+          ./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug > /tmp/gradle.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "=== gradle tail ==="
+            tail -60 /tmp/gradle.log
+            echo "=== error annotations (for visibility) ==="
+            awk '/What went wrong/{flag=1} flag{print} /^\* Try/{if(flag) exit}' /tmp/gradle.log | head -20 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+          fi
+          exit $code
+
+      - name: بارگذاری APKها
+        uses: actions/upload-artifact@v4
+        with:
+          name: carpart-android-apks
+          path: |
+            apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
+          if-no-files-found: error
+
+      # پس از ادغام در main، APKها روی Release «android-v1.0.0» منتشر می‌شوند
+      - name: انتشار APK در GitHub Release (فقط main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.0
+          name: اپلیکیشن اندروید کارپارت — APKها
+          files: |
+            apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
+          fail_on_unmatched_files: true
+          body: |
+            APKهای دو Flavor (مکانیک و پیک) ساخته‌شده با GitHub Actions (JDK 21 + Android SDK).
+            امضا با کلید debug است؛ برای انتشار در کافه‌بازار با keystore خود امضا بزنید (ANDROID.md).

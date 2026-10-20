@@ -56,6 +56,8 @@ export interface AppConfig {
     emailProvider: 'mock' | 'smtp';
     smtpUrl: string;
     emailFrom: string;
+    pushProvider: 'mock' | 'fcm';
+    fcmServerKey: string;
   };
   jobs: {
     runner: 'inline' | 'redis';
@@ -149,6 +151,8 @@ export function buildConfig(env: Env): AppConfig {
       emailProvider: env.EMAIL_PROVIDER,
       smtpUrl: env.SMTP_URL,
       emailFrom: env.EMAIL_FROM,
+      pushProvider: env.PUSH_PROVIDER,
+      fcmServerKey: env.FCM_SERVER_KEY,
     },
     jobs: {
       runner: env.JOB_RUNNER,

@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useSessionStore, hasRole } from './lib/session';
+import { api } from './lib/api';
+import { applyNativeChrome, onBackButton, platformName, registerPushToken, unregisterPushToken } from './lib/native';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import MechanicHome from './pages/mechanic/MechanicHome';
@@ -25,8 +27,49 @@ function RequireRole({ role, children }: { role: 'mechanic' | 'courier'; childre
   return <>{children}</>;
 }
 
+const PUSH_TOKEN_KEY = 'carpart_push_token';
+
 export default function App(): JSX.Element {
   const user = useSessionStore((s) => s.user);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // یکپارچه‌سازی نیتیو: نوار وضعیت برند + دکمه بازگشت سیستم‌عامل
+  useEffect(() => {
+    void applyNativeChrome();
+    onBackButton(() => {
+      const isRoot = ['/', '/login', '/mechanic', '/courier'].includes(location.pathname);
+      if (isRoot) return false; // اجازه خروج به سیستم‌عامل
+      navigate(-1);
+      return true;
+    });
+  }, [navigate, location.pathname]);
+
+  // اعلان فشاری: پس از ورود توکن دستگاه ثبت می‌شود؛ پس از خروج حذف می‌شود
+  useEffect(() => {
+    let cancelled = false;
+    async function syncPush(): Promise<void> {
+      const saved = localStorage.getItem(PUSH_TOKEN_KEY);
+      if (!user) {
+        if (saved) {
+          await api.notifications.unregisterDeviceToken(saved).catch(() => undefined);
+          localStorage.removeItem(PUSH_TOKEN_KEY);
+        }
+        await unregisterPushToken().catch(() => undefined);
+        return;
+      }
+      const registered = await registerPushToken();
+      if (cancelled || !registered) return;
+      await api.notifications
+        .registerDeviceToken({ token: registered.token, platform: platformName(), appFlavor: hasRole(user, 'courier') ? 'courier' : 'mechanic' })
+        .then(() => localStorage.setItem(PUSH_TOKEN_KEY, registered.token))
+        .catch(() => undefined);
+    }
+    void syncPush();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <Routes>
