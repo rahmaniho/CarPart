@@ -8,6 +8,8 @@ export interface HttpOptions {
   fetchImpl?: typeof fetch;
   /** وقتی رفرش نشست شکست خورد (کاربر باید دوباره وارد شود) */
   onSessionExpired?: () => void;
+  /** برای کلاینت نیتیو: سرور refreshToken را در پاسخ هم برمی‌گرداند */
+  clientPlatform?: 'web' | 'android' | 'ios';
 }
 
 export interface RequestOptions {
@@ -34,6 +36,7 @@ export class Http {
   private readonly tokens: TokenStore;
   private readonly fetchImpl: typeof fetch;
   private readonly onSessionExpired?: () => void;
+  private readonly clientPlatform: 'web' | 'android' | 'ios';
   private refreshPromise: Promise<boolean> | null = null;
 
   constructor(options: HttpOptions) {
@@ -41,6 +44,7 @@ export class Http {
     this.tokens = options.tokens;
     this.fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args));
     this.onSessionExpired = options.onSessionExpired;
+    this.clientPlatform = options.clientPlatform ?? 'web';
   }
 
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -83,10 +87,12 @@ export class Http {
     if (!this.refreshPromise) {
       this.refreshPromise = (async () => {
         try {
-          const res = await this.send<AuthSessionLike>('POST', '/auth/refresh', { anonymous: true, body: {} });
+          const refreshToken = this.tokens.getRefresh?.();
+          const res = await this.send<AuthSessionLike>('POST', '/auth/refresh', { anonymous: true, body: refreshToken ? { refreshToken } : {} });
           if (res.status !== 200) return false;
           const body = res.body as AuthSessionLike;
           if (body?.accessToken) this.tokens.setAccess(body.accessToken);
+          if (body?.refreshToken) this.tokens.setRefresh?.(body.refreshToken);
           return true;
         } catch {
           return false;
@@ -108,7 +114,7 @@ export class Http {
       url.searchParams.set(key, String(value));
     }
 
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: 'application/json', 'X-Client-Platform': this.clientPlatform };
     const access = this.tokens.getAccess();
     if (access && !options.anonymous) headers.Authorization = `Bearer ${access}`;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -152,4 +158,5 @@ interface RawResponse {
 
 interface AuthSessionLike {
   accessToken?: string;
+  refreshToken?: string;
 }

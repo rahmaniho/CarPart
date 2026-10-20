@@ -92,6 +92,15 @@ export function OtpInput({ value, onChange, disabled }: { value: string; onChang
   );
 }
 
+export function StatCard({ label, value, tone = 'default' }: { label: string; value: string | number; tone?: 'default' | 'primary' | 'money' }): JSX.Element {
+  return (
+    <div className={clsx('cp-card text-center', tone === 'primary' && 'border-primary/40 bg-primary-soft/30')}>
+      <p className="text-[11px] text-muted">{label}</p>
+      <p className={clsx('mt-1 text-lg font-extrabold tabular-nums', tone === 'money' && 'text-primary')}>{value}</p>
+    </div>
+  );
+}
+
 export function TopBar({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }): JSX.Element {
   return (
     <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur">

@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '@carpart/api-client';
-import { api, apiTokens } from '../lib/api';
-import { useSessionStore } from '../lib/session';
+import { api, persistAuthSession } from '../lib/api';
 import { ErrorBox, Field, OtpInput } from '../components/ui';
 
 /** ثبت‌نام مکانیک یا پیک با تأیید موبایل */
 export default function RegisterPage(): JSX.Element {
   const navigate = useNavigate();
-  const setSession = useSessionStore((s) => s.set);
-  const [role, setRole] = useState<'mechanic' | 'courier'>('mechanic');
+  const [role, setRole] = useState<'mechanic' | 'seller' | 'courier'>('mechanic');
   const [mobile, setMobile] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +27,7 @@ export default function RegisterPage(): JSX.Element {
         role,
         password: password || undefined,
         workshopName: role === 'mechanic' ? fullName : undefined,
+        storeName: role === 'seller' ? fullName : undefined,
         acceptTerms: true,
       });
       setRegisteredUserId(result.userId);
@@ -45,9 +44,8 @@ export default function RegisterPage(): JSX.Element {
     setError(null);
     try {
       const session = await api.auth.verifyOtp(mobile, code, 'mobile_verify');
-      apiTokens.setAccess(session.accessToken);
-      setSession(session.user);
-      navigate(role === 'courier' ? '/courier' : '/mechanic', { replace: true });
+      persistAuthSession(session);
+      navigate(role === 'courier' ? '/courier' : role === 'seller' ? '/seller' : '/mechanic', { replace: true });
     } catch (err) {
       setError(err instanceof ApiClientError ? err.userMessage : 'خطای ناشناخته رخ داد.');
     } finally {
@@ -61,11 +59,12 @@ export default function RegisterPage(): JSX.Element {
       <div className="cp-card space-y-4">
         {!registeredUserId ? (
           <>
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="نوع حساب">
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="نوع حساب">
               {(
                 [
-                  { value: 'mechanic', label: '🔧 مکانیک / تعمیرگاه' },
-                  { value: 'courier', label: '🛵 پیک (پیک موتوری/سواری)' },
+                  { value: 'mechanic', label: '🔧 مکانیک' },
+                  { value: 'seller', label: '🏪 فروشنده' },
+                  { value: 'courier', label: '🛵 پیک' },
                 ] as const
               ).map((option) => (
                 <button

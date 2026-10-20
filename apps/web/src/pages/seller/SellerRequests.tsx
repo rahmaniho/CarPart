@@ -24,7 +24,8 @@ export default function SellerRequests(): JSX.Element {
   const submitQuote = useMutation({
     mutationFn: () =>
       api.sellers.submitQuote(selected!.id, {
-        items: [{ sellerProductId: '', quantity: Number(selected!.quantity) || 1, unitPrice: Number(unitPrice) }],
+        // نکته: sellerProductId خالی نمی‌فرستیم (اعتبارسنجی UUID رد می‌کند)؛ نام قطعه از خود درخواست
+        items: [{ nameFa: String(selected!.partNameFa ?? selected!.titleFa), quantity: Number(selected!.quantity) || 1, unitPrice: Number(unitPrice) }],
         preparationMinutes: Number(preparationMinutes) || 30,
         note: note || undefined,
       }),

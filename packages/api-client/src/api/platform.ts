@@ -25,6 +25,24 @@ export interface AdminApi {
   updateUser(id: string, input: { roles?: string[]; isActive?: boolean; fullName?: string }): Promise<AdminUserRow>;
   orders(query?: { status?: string; sellerId?: string; page?: number; pageSize?: number }): Promise<PageResult<OrderRow>>;
   orderStatistics(days?: number): Promise<Record<string, unknown>>;
+  refunds(query?: { page?: number; pageSize?: number; status?: string }): Promise<PageResult<Record<string, unknown>>>;
+  approveRefund(id: string, note?: string): Promise<Record<string, unknown>>;
+  rejectRefund(id: string, reason: string): Promise<Record<string, unknown>>;
+  executeRefund(id: string): Promise<Record<string, unknown>>;
+  supportTickets(query?: { page?: number; pageSize?: number; status?: string }): Promise<PageResult<Record<string, unknown>>>;
+  supportTicket(id: string): Promise<Record<string, unknown>>;
+  replyTicket(id: string, body: string): Promise<Record<string, unknown>>;
+  assignTicket(id: string, assigneeId: string): Promise<Record<string, unknown>>;
+  returns(query?: { page?: number; pageSize?: number }): Promise<PageResult<Record<string, unknown>>>;
+  resolveReturn(id: string, input: { resolution: string; note?: string }): Promise<Record<string, unknown>>;
+  coupons(query?: { page?: number; pageSize?: number }): Promise<PageResult<Record<string, unknown>>>;
+  createCoupon(input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  updateCoupon(id: string, input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  deleteCoupon(id: string): Promise<{ deleted: boolean }>;
+  createAnnouncement(input: { titleFa: string; bodyFa: string; level?: string; isActive?: boolean }): Promise<Record<string, unknown>>;
+  updateAnnouncement(id: string, input: Record<string, unknown>): Promise<Record<string, unknown>>;
+  adminPayoutsList(query?: { page?: number; pageSize?: number; status?: string }): Promise<PageResult<Record<string, unknown>>>;
+  payoutAction(id: string, action: 'ready' | 'paid' | 'failed' | 'cancel'): Promise<Record<string, unknown>>;
   deliveries(query?: { page?: number; pageSize?: number }): Promise<PageResult<Record<string, unknown>>>;
   deliveryStatistics(): Promise<Record<string, unknown>>;
 }
@@ -50,7 +68,7 @@ export interface FinanceApi {
 
 export interface SupportApi {
   myTickets(query?: { page?: number; pageSize?: number }): Promise<PageResult<TicketRow>>;
-  openTicket(input: { subject: string; body: string; orderId?: string; priority?: string }): Promise<TicketRow>;
+  openTicket(input: { subject: string; body: string; category?: 'general' | 'order' | 'payment' | 'delivery' | 'part_mismatch' | 'seller' | 'courier' | 'technical'; orderId?: string; priority?: string }): Promise<TicketRow>;
   ticketMessages(id: string): Promise<Array<Record<string, unknown>>>;
   replyTicket(id: string, body: string): Promise<Record<string, unknown>>;
 }
@@ -70,6 +88,24 @@ export function adminApi(http: Http): AdminApi {
     updateUser: (id, input) => http.patch<AdminUserRow>(`/admin/users/${id}`, input),
     orders: (query = {}) => http.get<PageResult<OrderRow>>('/admin/orders', { query }),
     orderStatistics: (days = 30) => http.get<Record<string, unknown>>('/admin/orders/statistics', { query: { days } }),
+    refunds: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/payments/refunds', { query }),
+    approveRefund: (id, note) => http.post(`/admin/payments/refunds/${id}/approve`, { note }),
+    rejectRefund: (id, reason) => http.post(`/admin/payments/refunds/${id}/reject`, { reason }),
+    executeRefund: (id) => http.post(`/admin/payments/refunds/${id}/execute`, {}),
+    supportTickets: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/tickets', { query }),
+    supportTicket: (id) => http.get<Record<string, unknown>>(`/admin/tickets/${id}`),
+    replyTicket: (id, body) => http.post<Record<string, unknown>>(`/admin/tickets/${id}/replies`, { body }),
+    assignTicket: (id, assigneeId) => http.post<Record<string, unknown>>(`/admin/tickets/${id}/assign`, { assigneeId }),
+    returns: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/returns', { query }),
+    resolveReturn: (id, input) => http.post<Record<string, unknown>>(`/admin/returns/${id}/resolve`, input),
+    coupons: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/coupons', { query }),
+    createCoupon: (input) => http.post<Record<string, unknown>>('/admin/coupons', input),
+    updateCoupon: (id, input) => http.patch<Record<string, unknown>>(`/admin/coupons/${id}`, input),
+    deleteCoupon: (id) => http.delete<{ deleted: boolean }>(`/admin/coupons/${id}`),
+    createAnnouncement: (input) => http.post<Record<string, unknown>>('/admin/announcements', input),
+    updateAnnouncement: (id, input) => http.patch<Record<string, unknown>>(`/admin/announcements/${id}`, input),
+    adminPayoutsList: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/finance/payouts', { query }),
+    payoutAction: (id, action) => http.post<Record<string, unknown>>(`/admin/finance/payouts/${id}/${action}`, {}),
     deliveries: (query = {}) => http.get<PageResult<Record<string, unknown>>>('/admin/deliveries', { query }),
     deliveryStatistics: () => http.get<Record<string, unknown>>('/admin/deliveries/statistics'),
   };
@@ -102,9 +138,12 @@ export function financeApi(http: Http): FinanceApi {
 
 export function supportApi(http: Http): SupportApi {
   return {
-    myTickets: (query = {}) => http.get<PageResult<TicketRow>>('/support/tickets', { query }),
-    openTicket: (input) => http.post<TicketRow>('/support/tickets', input),
-    ticketMessages: (id) => http.get<Array<Record<string, unknown>>>(`/support/tickets/${id}/messages`),
-    replyTicket: (id, body) => http.post<Record<string, unknown>>(`/support/tickets/${id}/messages`, { body }),
+    myTickets: (query = {}) => http.get<PageResult<TicketRow>>('/tickets', { query }),
+    openTicket: (input) => http.post<TicketRow>('/tickets', { category: 'general', ...input }),
+    ticketMessages: async (id) => {
+      const ticket = await http.get<Record<string, unknown>>(`/tickets/${id}`);
+      return (ticket.replies as Array<Record<string, unknown>> | undefined) ?? [];
+    },
+    replyTicket: (id, body) => http.post<Record<string, unknown>>(`/tickets/${id}/replies`, { body }),
   };
 }

@@ -52,7 +52,7 @@ export function configureApp(app: INestApplication, config: AppConfig, options: 
       origin: config.app.corsOrigins.length ? config.app.corsOrigins : true,
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Idempotency-Key', 'X-Request-Id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Idempotency-Key', 'X-Request-Id', 'X-Client-Platform'],
       exposedHeaders: ['X-Request-Id'],
     });
   }

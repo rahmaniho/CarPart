@@ -28,6 +28,16 @@ export class AuthController {
     };
   }
 
+  /** آیا درخواست از پوسته نیتیو معتبر آمده؟ (وب هرگز refreshToken را در body نمی‌گیرد) */
+  private isNativeClient(req: Request): boolean {
+    const platform = String(req.headers['x-client-platform'] ?? '').toLowerCase();
+    return platform === 'android' || platform === 'ios';
+  }
+
+  private nativeRefresh(req: Request, token: string): { refreshToken: string } | Record<string, never> {
+    return this.isNativeClient(req) ? { refreshToken: token } : {};
+  }
+
   /** کوکی رفرش: فقط httpOnly، SameSite=Strict و در تولید Secure. */
   private setRefreshCookie(res: Response, refreshToken: string, maxAgeSeconds: number): void {
     res.cookie(REFRESH_COOKIE, refreshToken, {
@@ -59,6 +69,7 @@ export class AuthController {
       user: result.user,
       accessToken: result.tokens.accessToken,
       accessExpiresIn: result.tokens.accessExpiresIn,
+      ...this.nativeRefresh(req, result.tokens.refreshToken),
       requiresMobileVerification: result.requiresMobileVerification,
     };
   }
@@ -84,6 +95,7 @@ export class AuthController {
       user: result.user,
       accessToken: result.tokens.accessToken,
       accessExpiresIn: result.tokens.accessExpiresIn,
+      ...this.nativeRefresh(req, result.tokens.refreshToken),
       requiresMobileVerification: result.requiresMobileVerification,
     };
   }
@@ -104,6 +116,7 @@ export class AuthController {
       user: result.user,
       accessToken: result.tokens.accessToken,
       accessExpiresIn: result.tokens.accessExpiresIn,
+      ...this.nativeRefresh(req, result.tokens.refreshToken),
     };
   }
 

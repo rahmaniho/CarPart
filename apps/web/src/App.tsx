@@ -15,6 +15,9 @@ import VerificationsPage from './pages/VerificationsPage';
 import OrdersAdminPage, { DeliveriesAdminPage } from './pages/OrdersPages';
 import SettingsPage from './pages/SettingsPage';
 import AuditPage from './pages/AuditPage';
+import { CouponsPage, AnnouncementsPage } from './pages/admin/CouponsAnnouncements';
+import { PayoutsPage, RefundsPage } from './pages/admin/RefundsPayouts';
+import SupportPage from './pages/admin/SupportPage';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import SellerProducts from './pages/seller/SellerProducts';
 import SellerOrders from './pages/seller/SellerOrders';
@@ -69,6 +72,11 @@ export default function App(): JSX.Element {
       <Route path="/admin/deliveries" element={<RequirePanel><DeliveriesAdminPage /></RequirePanel>} />
       <Route path="/admin/settings" element={<RequirePanel><SettingsPage /></RequirePanel>} />
       <Route path="/admin/audit" element={<RequirePanel><AuditPage /></RequirePanel>} />
+      <Route path="/admin/refunds" element={<RequirePanel><RefundsPage /></RequirePanel>} />
+      <Route path="/admin/payouts" element={<RequirePanel><PayoutsPage /></RequirePanel>} />
+      <Route path="/admin/coupons" element={<RequirePanel><CouponsPage /></RequirePanel>} />
+      <Route path="/admin/announcements" element={<RequirePanel><AnnouncementsPage /></RequirePanel>} />
+      <Route path="/admin/support" element={<RequirePanel><SupportPage /></RequirePanel>} />
 
       {/* پنل فروشنده */}
       <Route path="/seller" element={<RequireSeller><SellerDashboard /></RequireSeller>} />

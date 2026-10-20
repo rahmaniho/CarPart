@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, apiTokens } from '../../lib/api';
+import { api, clearAuthSession } from '../../lib/api';
 import { useSessionStore } from '../../lib/session';
 import { AppShell } from '../../components/AppShell';
 import { ErrorBox, Field, Section, Spinner } from '../../components/ui';
@@ -12,7 +12,6 @@ export default function ProfilePage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useSessionStore((s) => s.user);
-  const clearSession = useSessionStore((s) => s.clear);
 
   const vehicles = useQuery({ queryKey: ['vehicles'], queryFn: () => api.workshops.vehicles() });
   const addresses = useQuery({ queryKey: ['addresses'], queryFn: () => api.workshops.addresses() });
@@ -131,13 +130,16 @@ export default function ProfilePage(): JSX.Element {
         </div>
       </Section>
 
+      <button type="button" className="cp-btn-ghost w-full" onClick={() => navigate('/mechanic/support')}>
+        🎧 پشتیبانی و تیکت‌های من
+      </button>
+
       <button
         type="button"
         className="cp-btn-ghost w-full text-red-700"
         onClick={async () => {
           await api.auth.logout().catch(() => undefined);
-          apiTokens.setAccess(null);
-          clearSession();
+          clearAuthSession();
           navigate('/login', { replace: true });
         }}
       >

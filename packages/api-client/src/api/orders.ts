@@ -54,7 +54,7 @@ export interface PaymentsApi {
   create(input: { orderId: string; method?: string; returnUrl?: string }, idempotencyKey?: string): Promise<PaymentRow>;
   verify(input: { orderId: string; refId?: string; authority?: string }): Promise<PaymentRow>;
   sandboxConfirm(input: { orderId: string; decision: 'paid' | 'failed' }): Promise<PaymentRow>;
-  refund(input: { paymentId: string; amount?: number; reason: string }, idempotencyKey?: string): Promise<Record<string, unknown>>;
+  refund(input: { orderId: string; reason: string }, idempotencyKey?: string): Promise<Record<string, unknown>>;
   myRefunds(query?: { page?: number; pageSize?: number }): Promise<PageResult<Record<string, unknown>>>;
 }
 

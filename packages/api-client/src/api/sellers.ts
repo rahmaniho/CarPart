@@ -52,7 +52,7 @@ export interface SellerProductRow {
 
 export interface CreateProductInput {
   partId?: string;
-  newPart?: { nameFa: string; brandId?: string; categoryId?: string; technicalCode?: string; oemCode?: string };
+  newPart?: { nameFa: string; categoryId: string; brandId?: string; technicalCode?: string; oemCode?: string };
   branchId?: string;
   sku?: string;
   price: number;
@@ -66,7 +66,7 @@ export interface CreateProductInput {
 }
 
 export interface SubmitQuoteInput {
-  items: Array<{ sellerProductId: string; quantity: number; unitPrice: number }>;
+  items: Array<{ sellerProductId?: string; nameFa?: string; quantity: number; unitPrice: number }>;
   preparationMinutes: number;
   note?: string;
   deliveryFee?: number;

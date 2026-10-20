@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { SearchOffer } from '@carpart/api-client';
 import { api } from '../../lib/api';
-import { idempotencyKey } from '../../lib/hooks';
+
 import { AppShell } from '../../components/AppShell';
 import { EmptyState, ErrorBox, Money, Section, Spinner } from '../../components/ui';
 import { MECHANIC_TABS } from './MechanicHome';
@@ -27,8 +27,6 @@ export default function SearchPage(): JSX.Element {
   const navigate = useNavigate();
   const [q, setQ] = useState(params.get('q') ?? '');
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [buying, setBuying] = useState<string | null>(null);
-  const [buyError, setBuyError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ['search', params.get('q')],
@@ -36,20 +34,9 @@ export default function SearchPage(): JSX.Element {
     enabled: Boolean(params.get('q')),
   });
 
-  async function buyNow(offer: SearchOffer): Promise<void> {
-    setBuying(offer.sellerProductId);
-    setBuyError(null);
-    try {
-      const order = await api.orders.create(
-        { items: [{ sellerProductId: offer.sellerProductId, quantity: 1 }], urgency: 'normal' },
-        idempotencyKey('order'),
-      );
-      navigate(`/mechanic/orders/${order.id}`);
-    } catch (error) {
-      setBuyError(error instanceof Error ? error.message : 'ثبت سفارش ناموفق بود');
-    } finally {
-      setBuying(null);
-    }
+  function buyNow(offer: SearchOffer): void {
+    // هدایت به صفحه تأیید خرید (تعداد/نشانی/کوپن)؛ قیمت نهایی سمت سرور محاسبه می‌شود
+    navigate('/mechanic/checkout', { state: { offer } });
   }
 
   return (
@@ -66,8 +53,6 @@ export default function SearchPage(): JSX.Element {
           جست‌وجو
         </button>
       </form>
-
-      {buyError ? <ErrorBox message={buyError} /> : null}
 
       {query.isLoading ? <Spinner /> : null}
       {query.isError ? <ErrorBox message="دریافت نتایج ممکن نشد" onRetry={() => query.refetch()} /> : null}
@@ -148,10 +133,10 @@ export default function SearchPage(): JSX.Element {
                 <button
                   type="button"
                   className="cp-btn-primary"
-                  disabled={offer.stock <= 0 || buying === offer.sellerProductId}
+                  disabled={offer.stock <= 0}
                   onClick={() => buyNow(offer)}
                 >
-                  {buying === offer.sellerProductId ? 'در حال ثبت…' : 'خرید مستقیم'}
+                  خرید مستقیم
                 </button>
                 <button
                   type="button"

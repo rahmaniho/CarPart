@@ -12,8 +12,8 @@ export default function SellerProducts(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<SellerProductRow | null>(null);
-  const [draft, setDraft] = useState<{ partName: string; price: string; stock: string; sku: string; quality: string; preparationMinutes: string }>({
-    partName: '',
+  const [draft, setDraft] = useState<{ partId: string; price: string; stock: string; sku: string; quality: string; preparationMinutes: string }>({
+    partId: '',
     price: '',
     stock: '',
     sku: '',
@@ -26,16 +26,14 @@ export default function SellerProducts(): JSX.Element {
 
   const create = useMutation({
     mutationFn: () => {
-      const matched = (parts.data?.items ?? []).find((part) => String((part as { nameFa?: string }).nameFa ?? '') === draft.partName);
       const input: CreateProductInput = {
+        partId: draft.partId,
         price: Number(draft.price),
         stock: Number(draft.stock),
         sku: draft.sku || undefined,
         quality: draft.quality,
         preparationMinutes: Number(draft.preparationMinutes) || 30,
       };
-      if (matched) input.partId = String((matched as { id: string }).id);
-      else input.newPart = { nameFa: draft.partName };
       return api.sellers.createProduct(input);
     },
     onSuccess: () => {
@@ -82,8 +80,11 @@ export default function SellerProducts(): JSX.Element {
       {showCreate ? (
         <div className="cp-card grid grid-cols-2 gap-3">
           <label className="col-span-2 block">
-            <span className="mb-1 block text-xs text-muted">نام قطعه (اگر در کاتالوگ باشد همان انتخاب می‌شود)</span>
-            <input className="cp-field" value={draft.partName} onChange={(e) => setDraft({ ...draft, partName: e.target.value })} placeholder="مثلاً لنت ترمز جلو پراید" />
+            <span className="mb-1 block text-xs text-muted">قطعه از کاتالوگ</span>
+            <select className="cp-field" value={draft.partId} onChange={(e) => setDraft({ ...draft, partId: e.target.value })}>
+              <option value="">— انتخاب قطعه —</option>
+              {(parts.data?.items ?? []).map((part) => <option key={String(part.id)} value={String(part.id)}>{String(part.nameFa ?? 'قطعه')}</option>)}
+            </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-muted">قیمت (تومان)</span>
@@ -111,7 +112,7 @@ export default function SellerProducts(): JSX.Element {
             <input className="cp-field" inputMode="numeric" value={draft.preparationMinutes} onChange={(e) => setDraft({ ...draft, preparationMinutes: e.target.value.replace(/\D/g, '') })} />
           </label>
           <div className="col-span-2 flex gap-2">
-            <button type="button" className="cp-btn-primary" disabled={create.isPending || !draft.partName || !draft.price || !draft.stock} onClick={() => create.mutate()}>
+            <button type="button" className="cp-btn-primary" disabled={create.isPending || !draft.partId || !draft.price || !draft.stock} onClick={() => create.mutate()}>
               ثبت محصول
             </button>
             <button type="button" className="cp-btn-ghost" onClick={() => setShowCreate(false)}>

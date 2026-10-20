@@ -75,6 +75,16 @@ export function DataTable({ headers, children }: { headers: string[]; children: 
   );
 }
 
+export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }): JSX.Element {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+      {children}
+      {hint ? <span className="mt-1 block text-[11px] text-muted">{hint}</span> : null}
+    </label>
+  );
+}
+
 export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }): JSX.Element {
   return (
     <section className="space-y-2">

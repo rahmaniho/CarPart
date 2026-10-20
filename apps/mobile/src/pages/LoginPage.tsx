@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ApiClientError } from '@carpart/api-client';
-import { api, apiTokens } from '../lib/api';
-import { useSessionStore } from '../lib/session';
+import { api, configureApiBaseUrl, currentApiBaseUrl, needsApiConfiguration, persistAuthSession } from '../lib/api';
 import { ErrorBox, Field, OtpInput, Spinner } from '../components/ui';
 
 type Step = 'mobile' | 'otp' | 'password';
@@ -10,7 +9,6 @@ type Step = 'mobile' | 'otp' | 'password';
 /** ورود با کد یکبارمصرف یا رمز عبور — پیام‌ها و خطاها فارسی */
 export default function LoginPage(): JSX.Element {
   const navigate = useNavigate();
-  const setSession = useSessionStore((s) => s.set);
   const [step, setStep] = useState<Step>('mobile');
   const [mobile, setMobile] = useState('');
   const [code, setCode] = useState('');
@@ -19,9 +17,12 @@ export default function LoginPage(): JSX.Element {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiUrl, setApiUrl] = useState(() => currentApiBaseUrl() === '/api/v1' ? '' : currentApiBaseUrl().replace(/\/api\/v1$/, ''));
+  const [showApiSetup, setShowApiSetup] = useState(() => needsApiConfiguration());
 
   function goHome(roles: string[]): void {
-    if (roles.includes('courier') && !roles.includes('mechanic')) navigate('/courier', { replace: true });
+    if (roles.includes('seller') && !roles.includes('mechanic')) navigate('/seller', { replace: true });
+    else if (roles.includes('courier') && !roles.includes('mechanic')) navigate('/courier', { replace: true });
     else navigate('/mechanic', { replace: true });
   }
 
@@ -45,8 +46,7 @@ export default function LoginPage(): JSX.Element {
     setError(null);
     try {
       const session = await api.auth.verifyOtp(mobile, code, 'login');
-      apiTokens.setAccess(session.accessToken);
-      setSession(session.user);
+      persistAuthSession(session);
       goHome(session.user.roles);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.userMessage : 'خطای ناشناخته رخ داد.');
@@ -60,8 +60,7 @@ export default function LoginPage(): JSX.Element {
     setError(null);
     try {
       const session = await api.auth.login(mobile, password);
-      apiTokens.setAccess(session.accessToken);
-      setSession(session.user);
+      persistAuthSession(session);
       goHome(session.user.roles);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.userMessage : 'خطای ناشناخته رخ داد.');
@@ -78,7 +77,19 @@ export default function LoginPage(): JSX.Element {
         <p className="mt-1 text-sm text-muted">تأمین و ارسال سریع قطعات یدکی</p>
       </div>
 
-      <div className="cp-card space-y-4">
+      {showApiSetup ? (
+        <div className="cp-card space-y-3 border-amber-300 bg-amber-50">
+          <h2 className="text-sm font-bold text-amber-900">تنظیم نشانی سرور</h2>
+          <p className="text-xs leading-6 text-amber-900">این نسخه اندروید برای اتصال به بک‌اند به نشانی عمومی HTTPS نیاز دارد. مثال: https://api.example.ir</p>
+          <input className="cp-field" dir="ltr" inputMode="url" placeholder="https://api.example.ir" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} />
+          <button type="button" className="cp-btn-primary w-full" disabled={!apiUrl.startsWith('http')} onClick={() => { try { configureApiBaseUrl(apiUrl); } catch (err) { setError(err instanceof Error ? err.message : 'نشانی نامعتبر است'); } }}>
+            ذخیره و راه‌اندازی مجدد
+          </button>
+          {!needsApiConfiguration() ? <button type="button" className="cp-btn-ghost w-full" onClick={() => setShowApiSetup(false)}>انصراف</button> : null}
+        </div>
+      ) : null}
+
+      {!showApiSetup ? <div className="cp-card space-y-4">
         {step === 'mobile' ? (
           <>
             <Field label="شماره موبایل">
@@ -145,8 +156,9 @@ export default function LoginPage(): JSX.Element {
         ) : null}
 
         {error ? <ErrorBox message={error} /> : null}
-      </div>
+      </div> : null}
 
+      {!showApiSetup ? <button type="button" className="text-center text-[11px] text-muted underline" onClick={() => setShowApiSetup(true)}>تنظیم نشانی سرور</button> : null}
       <p className="text-center text-[11px] leading-5 text-muted">
         با ورود، <span className="font-semibold">شرایط استفاده</span> و <span className="font-semibold">حریم خصوصی</span> کارپارت را می‌پذیرید.
       </p>

@@ -30,6 +30,8 @@ export interface AuthSession {
   user: SessionUser;
   accessToken: string;
   accessExpiresIn: number;
+  /** فقط در کلاینت native (با هدر X-Client-Platform)؛ وب از کوکی httpOnly استفاده می‌کند */
+  refreshToken?: string;
   requiresMobileVerification: boolean;
 }
 
