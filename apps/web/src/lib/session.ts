@@ -39,3 +39,8 @@ export function canUsePanel(user: SessionUser | null): boolean {
 export function isAdmin(user: SessionUser | null): boolean {
   return Boolean(user?.roles?.includes('admin'));
 }
+
+/** پنل فروشنده فقط برای نقش فروشنده */
+export function canUseSeller(user: SessionUser | null): boolean {
+  return Boolean(user?.roles?.includes('seller'));
+}

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import LoginPage from '../src/pages/LoginPage';
-import { canUsePanel, isAdmin, useSessionStore } from '../src/lib/session';
+import { LoginPage } from '../src/pages/public/AuthPages';
+import { canUsePanel, canUseSeller, isAdmin, useSessionStore } from '../src/lib/session';
 import { compactMoney, toFaDigits } from '../src/lib/format';
 import { StatusChip, StatCard } from '../src/components/ui';
 import type { SessionUser } from '@carpart/api-client';
@@ -13,71 +13,90 @@ vi.mock('../src/lib/api', () => ({
   apiTokens: { getAccess: () => null, setAccess: vi.fn(), clear: vi.fn() },
 }));
 
-describe('پنل مدیریت — سطح دسترسی', () => {
-  it('operator و admin اجازه ورود دارند؛ مکانیک نه', () => {
-    const admin: SessionUser = { id: '1', roles: ['admin'], mobile: '09120000000', fullName: 'مدیر', permissions: [], isActive: true, city: null, email: null };
-    const operator: SessionUser = { ...admin, id: '2', roles: ['operator'] };
-    const mechanic: SessionUser = { ...admin, id: '3', roles: ['mechanic'] };
-    expect(canUsePanel(admin)).toBe(true);
-    expect(canUsePanel(operator)).toBe(true);
-    expect(canUsePanel(mechanic)).toBe(false);
-    expect(isAdmin(admin)).toBe(true);
-    expect(isAdmin(operator)).toBe(false);
+describe('پنل‌ها — سطح دسترسی', () => {
+  it('admin و operator به پنل مدیریت؛ seller به پنل فروشنده', () => {
+    const base: SessionUser = { id: '1', roles: ['admin'], mobile: '09120000000', fullName: 'مدیر', permissions: [], isActive: true, city: null, email: null };
+    expect(canUsePanel({ ...base, roles: ['admin'] })).toBe(true);
+    expect(canUsePanel({ ...base, roles: ['operator'] })).toBe(true);
+    expect(canUsePanel({ ...base, roles: ['mechanic'] })).toBe(false);
+    expect(canUseSeller({ ...base, roles: ['seller'] })).toBe(true);
+    expect(canUseSeller({ ...base, roles: ['mechanic'] })).toBe(false);
+    expect(isAdmin({ ...base, roles: ['admin'] })).toBe(true);
+    expect(isAdmin({ ...base, roles: ['operator'] })).toBe(false);
   });
 });
 
-describe('پنل مدیریت — ورود', () => {
+describe('ورود عمومی — هدایت بر اساس نقش', () => {
   beforeEach(() => {
     useSessionStore.getState().clear();
     login.mockReset();
   });
 
-  it('ورود اپراتور موفق، به داشبورد می‌برد', async () => {
+  it('اپراتور به پنل مدیریت هدایت می‌شود', async () => {
     login.mockResolvedValue({
-      user: { id: 'u1', mobile: '09120000001', fullName: 'اپراتور پشتیبانی', roles: ['operator'], permissions: [], isActive: true, city: null, email: null },
+      user: { id: 'u1', mobile: '09120000001', fullName: 'اپراتور', roles: ['operator'], permissions: [], isActive: true, city: null, email: null },
       accessToken: 'tok',
       accessExpiresIn: 900,
       requiresMobileVerification: false,
     });
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<p>داشبورد</p>} />
+          <Route path="/admin" element={<p>داشبورد مدیریت</p>} />
         </Routes>
       </MemoryRouter>,
     );
-    const [mobileInput, passwordInput] = Array.from(container.querySelectorAll('input'));
-    fireEvent.change(mobileInput, { target: { value: '09120000001' } });
-    fireEvent.change(passwordInput, { target: { value: 'secret' } });
-    fireEvent.click(screen.getByText('ورود'));
-    await waitFor(() => expect(screen.getByText('داشبورد')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('شماره موبایل'), { target: { value: '09120000001' } });
+    fireEvent.change(screen.getByLabelText('رمز عبور'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ورود' }));
+    await waitFor(() => expect(screen.getByText('داشبورد مدیریت')).toBeTruthy());
   });
 
-  it('کاربر بدون نقش مدیریتی اجازه ورود ندارد و پیام فارسی می‌بیند', async () => {
+  it('فروشنده به پنل فروشنده هدایت می‌شود', async () => {
     login.mockResolvedValue({
-      user: { id: 'u2', mobile: '09121110001', fullName: 'مکانیک', roles: ['mechanic'], permissions: [], isActive: true, city: null, email: null },
+      user: { id: 'u2', mobile: '09122220001', fullName: 'فروشنده', roles: ['seller'], permissions: [], isActive: true, city: 'تهران', email: null },
       accessToken: 'tok',
       accessExpiresIn: 900,
       requiresMobileVerification: false,
     });
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<p>داشبورد</p>} />
+          <Route path="/seller" element={<p>پنل فروشنده</p>} />
         </Routes>
       </MemoryRouter>,
     );
-    const [mobileInput, passwordInput] = Array.from(container.querySelectorAll('input'));
-    fireEvent.change(mobileInput, { target: { value: '09121110001' } });
-    fireEvent.change(passwordInput, { target: { value: 'secret' } });
-    fireEvent.click(screen.getByText('ورود'));
-    await waitFor(() => expect(screen.getByText(/دسترسی به پنل مدیریت ندارید/)).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('شماره موبایل'), { target: { value: '09122220001' } });
+    fireEvent.change(screen.getByLabelText('رمز عبور'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ورود' }));
+    await waitFor(() => expect(screen.getByText('پنل فروشنده')).toBeTruthy());
+  });
+
+  it('مکانیک به صفحه عمومی هدایت می‌شود', async () => {
+    login.mockResolvedValue({
+      user: { id: 'u3', mobile: '09121110001', fullName: 'مکانیک', roles: ['mechanic'], permissions: [], isActive: true, city: 'تهران', email: null },
+      accessToken: 'tok',
+      accessExpiresIn: 900,
+      requiresMobileVerification: false,
+    });
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<p>صفحه خانگی</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('شماره موبایل'), { target: { value: '09121110001' } });
+    fireEvent.change(screen.getByLabelText('رمز عبور'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ورود' }));
+    await waitFor(() => expect(screen.getByText('صفحه خانگی')).toBeTruthy());
   });
 });
 
-describe('اجزای پنل', () => {
+describe('اجزای مشترک', () => {
   it('وضعیت‌ها برچسب فارسی و کارت آمار مقدار درست نشان می‌دهند', () => {
     render(
       <>

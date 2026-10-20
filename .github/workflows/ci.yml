@@ -1,0 +1,59 @@
+# CI کارپارت: typecheck + بیلد + همه تست‌ها
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+
+      - name: بیلد قرارداد و کلاینت
+        run: |
+          npm run build:contract
+          npm run build -w @carpart/api-client
+
+      - name: Typecheck (همه workspaceها)
+        run: npm run typecheck --workspaces --if-present
+
+      - name: تست‌های API (Jest — واحد + سرتاسری)
+        run: npm run test -w @carpart/api
+
+      - name: تست‌های کلاینت API
+        run: npm run test -w @carpart/api-client
+
+      - name: تست‌های موبایل
+        run: npm run test -w @carpart/mobile
+
+      - name: تست‌های وب
+        run: npm run test -w @carpart/web
+
+      - name: بیلد تولید (API + وب + موبایل)
+        run: |
+          npm run build -w @carpart/api
+          npm run build -w @carpart/web
+          npm run build -w @carpart/mobile
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: ساخت تصاویر Docker (بدون push)
+        run: |
+          docker build -f deploy/Dockerfile.api -t carpart-api:ci .
+          docker build -f deploy/Dockerfile.web -t carpart-web:ci .

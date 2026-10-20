@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/dist
+**/data
+**/uploads
+**/.git
+*.log
+.env
+.env.*
+apps/mobile/android/app/src/main/assets

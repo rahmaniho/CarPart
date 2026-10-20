@@ -75,6 +75,18 @@ export function DataTable({ headers, children }: { headers: string[]; children: 
   );
 }
 
+export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }): JSX.Element {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-muted">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }): JSX.Element {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">

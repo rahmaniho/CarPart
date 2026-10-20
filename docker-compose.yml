@@ -1,0 +1,63 @@
+# استقرار کامل: PostgreSQL + API + وب (Nginx)
+# استفاده: docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: carpart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD را تنظیم کنید}
+      POSTGRES_DB: carpart
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U carpart']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost}
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      DB_TYPE: postgres
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: carpart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: carpart
+      DB_SYNC: 'false'
+      DB_MIGRATIONS_RUN: 'true'
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET را تنظیم کنید}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET را تنظیم کنید}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY را تنظیم کنید}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-sandbox}
+      ZARINPAL_MERCHANT_ID: ${ZARINPAL_MERCHANT_ID:-}
+      MAP_PROVIDER: ${MAP_PROVIDER:-mock}
+      MAP_API_KEY: ${MAP_API_KEY:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      SMS_API_KEY: ${SMS_API_KEY:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mock}
+      SEED_DEMO_DATA: 'false'
+    ports:
+      - '4000:4000'
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    depends_on:
+      - api
+    ports:
+      - '80:80'
+
+volumes:
+  pgdata:
