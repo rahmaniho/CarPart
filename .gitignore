@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.env
+.env.local
+.env.*.local
+data/
+uploads/
+.DS_Store
+apps/api/*.sqlite
+apps/api/*.db
+.turbo/
+.vite/
+
+# داده محلی توسعه (پایگاه‌داده sqljs و فایل‌های بارگذاری‌شده)
+apps/api/data/
+apps/api/uploads/
+apps/web/data/
