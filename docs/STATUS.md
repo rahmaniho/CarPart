@@ -27,7 +27,7 @@
 | داده دمو | فقط با `SEED_DEMO_DATA` در توسعه |
 
 ## ❌ ناتمام/خارج از این نسخه
-- ~~کامپایل APK~~ → از طریق **GitHub Actions** ساخته می‌شود (`.github/workflows/android.yml`) — نصب/انتشار نیازمند keystore انتشار
+- ✅ **کامپایل APK** → با GitHub Actions ساخته شد (آرتیفکت `carpart-android-apks` ~۱۰ مگابایت، دو Flavor)؛ پس از ادغام روی Release `android-v1.0.0` هم منتشر می‌شود — انتشار در کافه‌بازار نیازمند keystore انتشار
 - ~~اعلان Push~~ → **زیرساخت کامل** (ثبت توکن دستگاه + PushProvider FCM/mock) — ارسال واقعی نیازمند `FCM_SERVER_KEY`
 - **مهاجرت baseline پایگاه‌داده PostgreSQL** (توسعه با synchronize بوده)
 - **CSP سخت‌شده** (در توسعه غیرفعال)

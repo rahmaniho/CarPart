@@ -1,6 +1,9 @@
 # ساخت APKهای اندروید (دو Flavor) در CI — چون ساخت محلی نیازمند Android SDK است
 name: Android
 
+permissions:
+  contents: write
+
 on:
   pull_request:
   push:
@@ -67,3 +70,18 @@ jobs:
             apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
             apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
           if-no-files-found: error
+
+      # پس از ادغام در main، APKها روی Release «android-v1.0.0» منتشر می‌شوند
+      - name: انتشار APK در GitHub Release (فقط main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.0
+          name: اپلیکیشن اندروید کارپارت — APKها
+          files: |
+            apps/mobile/android/app/build/outputs/apk/mechanic/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/courier/debug/*.apk
+          fail_on_unmatched_files: true
+          body: |
+            APKهای دو Flavor (مکانیک و پیک) ساخته‌شده با GitHub Actions (JDK 21 + Android SDK).
+            امضا با کلید debug است؛ برای انتشار در کافه‌بازار با keystore خود امضا بزنید (ANDROID.md).
