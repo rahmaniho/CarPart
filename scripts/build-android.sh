@@ -13,12 +13,13 @@ npx cap sync android
 
 echo "==> ساخت APKها"
 cd android
-./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug
+./gradlew --no-daemon assembleMechanicDebug assembleCourierDebug assembleSellerDebug
 
 echo "==> خروجی:"
 echo "  app/build/outputs/apk/mechanic/debug/app-mechanic-debug.apk"
 echo "  app/build/outputs/apk/courier/debug/app-courier-debug.apk"
+echo "  app/build/outputs/apk/seller/debug/app-seller-debug.apk"
 echo ""
 echo "برای نسخه release (با keystore واقعی):"
 echo "  CARPART_KEYSTORE_FILE=... CARPART_KEYSTORE_PASSWORD=... CARPART_KEY_ALIAS=... CARPART_KEY_PASSWORD=... \\"
-echo "    ./gradlew assembleMechanicRelease assembleCourierRelease"
+echo "    ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease"

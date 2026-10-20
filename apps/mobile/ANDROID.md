@@ -7,8 +7,15 @@ WebView بومی بسته‌بندی می‌کند. دو Flavor مستقل:
 |---|---|---|---|
 | `mechanic` | `ir.carpart.app.mechanic` | کارپارت مکانیک | سبز فیروزه‌ای `#0F766E` |
 | `courier` | `ir.carpart.app.courier` | کارپارت پیک | نارنجی `#C2410C` |
+| `seller` | `ir.carpart.app.seller` | کارپارت تأمین‌کننده | بنفش `#6D28D9` |
 
 هر دو APK از یک کدبیس ساخته می‌شوند و بر اساس نقش کاربر پوستهٔ درست را نشان می‌دهند.
+
+## 🛡 پایداری (رفع کرش نسخه قبل)
+- **Firebase placeholder** در `MainActivity`: بدون `google-services.json` هم اپ هرگز کرش نمی‌کند (ثبت Push شکست می‌خورد ولی اپ پایدار می‌ماند)
+- دکمه بازگشت با **یک listener و cleanup** (تجمع listener باعث بسته شدن ناگهانی اپ می‌شد)
+- هیچ تماس Push هنگام بالا آمدن اپ انجام نمی‌شود (فقط ۲.۵ ثانیه بعد از ورود کاربر)
+- Service Worker در WebView اندروید غیرفعال است
 
 ## ✅ امکانات نیتیو این نسخه
 - **اعلان فشاری (Push/FCM):** ثبت خودکار توکن دستگاه پس از ورود (`POST /notifications/device-tokens`)،
@@ -36,14 +43,14 @@ gh run download --name carpart-android-apks
 ./scripts/build-android.sh
 # یا مستقیم:
 cd apps/mobile && npm run build && npx cap sync android && cd android
-./gradlew assembleMechanicDebug assembleCourierDebug
+./gradlew assembleMechanicDebug assembleCourierDebug assembleSellerDebug
 ```
 خروجی: `android/app/build/outputs/apk/{mechanic,courier}/debug/`
 
 نسخه انتشار (با keystore):
 ```bash
 CARPART_KEYSTORE_FILE=/path/release.jks CARPART_KEYSTORE_PASSWORD=... CARPART_KEY_ALIAS=... CARPART_KEY_PASSWORD=... \
-  ./gradlew assembleMechanicRelease assembleCourierRelease
+  ./gradlew assembleMechanicRelease assembleCourierRelease assembleSellerRelease
 ```
 
 ## اعلان فشاری واقعی (FCM)

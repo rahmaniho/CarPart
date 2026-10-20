@@ -21,8 +21,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-// ثبت Service Worker فقط در بیلد تولید (تا توسعه با کش کهنه نشود)
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// ثبت Service Worker فقط در وب — در WebView اندروید عمداً غیرفعال است
+// (کش SW در WebView باعث وضعیت‌های عجیب و بسته شدن اپ می‌شد)
+const isNativeShell = (() => {
+  try {
+    return /Capacitor/i.test(navigator.userAgent) || window.location.protocol === 'capacitor:';
+  } catch {
+    return false;
+  }
+})();
+if (import.meta.env.PROD && !isNativeShell && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   });

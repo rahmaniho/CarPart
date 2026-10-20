@@ -21,7 +21,8 @@ export default function LoginPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   function goHome(roles: string[]): void {
-    if (roles.includes('courier') && !roles.includes('mechanic')) navigate('/courier', { replace: true });
+    if (roles.includes('seller') && !roles.includes('mechanic')) navigate('/seller', { replace: true });
+    else if (roles.includes('courier') && !roles.includes('mechanic')) navigate('/courier', { replace: true });
     else navigate('/mechanic', { replace: true });
   }
 

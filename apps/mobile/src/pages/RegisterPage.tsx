@@ -9,7 +9,7 @@ import { ErrorBox, Field, OtpInput } from '../components/ui';
 export default function RegisterPage(): JSX.Element {
   const navigate = useNavigate();
   const setSession = useSessionStore((s) => s.set);
-  const [role, setRole] = useState<'mechanic' | 'courier'>('mechanic');
+  const [role, setRole] = useState<'mechanic' | 'seller' | 'courier'>('mechanic');
   const [mobile, setMobile] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +47,7 @@ export default function RegisterPage(): JSX.Element {
       const session = await api.auth.verifyOtp(mobile, code, 'mobile_verify');
       apiTokens.setAccess(session.accessToken);
       setSession(session.user);
-      navigate(role === 'courier' ? '/courier' : '/mechanic', { replace: true });
+      navigate(role === 'courier' ? '/courier' : role === 'seller' ? '/seller' : '/mechanic', { replace: true });
     } catch (err) {
       setError(err instanceof ApiClientError ? err.userMessage : 'خطای ناشناخته رخ داد.');
     } finally {
@@ -64,8 +64,9 @@ export default function RegisterPage(): JSX.Element {
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="نوع حساب">
               {(
                 [
-                  { value: 'mechanic', label: '🔧 مکانیک / تعمیرگاه' },
-                  { value: 'courier', label: '🛵 پیک (پیک موتوری/سواری)' },
+                  { value: 'mechanic', label: '🔧 مکانیک' },
+                  { value: 'seller', label: '🏪 فروشنده' },
+                  { value: 'courier', label: '🛵 پیک' },
                 ] as const
               ).map((option) => (
                 <button

@@ -34,3 +34,10 @@ const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 export function toFaDigits(value: string | number): string {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)]);
 }
+
+/** مبلغ فشرده فارسی (میلیون/هزار) */
+export function compactMoney(amount: number): string {
+  if (Math.abs(amount) >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)} میلیون`;
+  if (Math.abs(amount) >= 1_000) return `${Math.round(amount / 1_000)} هزار`;
+  return String(amount);
+}

@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useSessionStore, hasRole } from './lib/session';
+import type { SessionUser } from '@carpart/api-client';
 import { api } from './lib/api';
-import { applyNativeChrome, onBackButton, platformName, registerPushToken, unregisterPushToken } from './lib/native';
+import { applyNativeChrome, onBackButton, platformName, registerPushToken } from './lib/native';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import MechanicHome from './pages/mechanic/MechanicHome';
@@ -15,14 +16,26 @@ import CourierHome from './pages/courier/CourierHome';
 import MissionDetailPage from './pages/courier/MissionDetailPage';
 import CourierEarningsPage from './pages/courier/CourierEarningsPage';
 import CourierProfilePage from './pages/courier/CourierProfilePage';
+import SellerHome, { SellerProfile } from './pages/seller/SellerHome';
+import SellerProducts from './pages/seller/SellerProducts';
+import SellerOrders from './pages/seller/SellerOrders';
+import SellerRequests from './pages/seller/SellerRequests';
+import SellerFinance from './pages/seller/SellerFinance';
 
 /** نگهبان مسیر: بدون نشست → ورود؛ بدون نقش → مسیر نقش خودش */
-function RequireRole({ role, children }: { role: 'mechanic' | 'courier'; children: ReactNode }): JSX.Element {
+function homeFor(user: SessionUser | null): string {
+  if (!user) return '/login';
+  if (hasRole(user, 'seller')) return '/seller';
+  if (hasRole(user, 'courier') && !hasRole(user, 'mechanic')) return '/courier';
+  return '/mechanic';
+}
+
+function RequireRole({ role, children }: { role: 'mechanic' | 'courier' | 'seller'; children: ReactNode }): JSX.Element {
   const user = useSessionStore((s) => s.user);
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   if (!hasRole(user, role)) {
-    return <Navigate to={hasRole(user, 'courier') ? '/courier' : '/mechanic'} replace />;
+    return <Navigate to={homeFor(user)} replace />;
   }
   return <>{children}</>;
 }
@@ -33,47 +46,56 @@ export default function App(): JSX.Element {
   const user = useSessionStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
+  const pathRef = useRef(location.pathname);
+  pathRef.current = location.pathname;
 
-  // یکپارچه‌سازی نیتیو: نوار وضعیت برند + دکمه بازگشت سیستم‌عامل
+  // یکپارچه‌سازی نیتیو: نوار وضعیت برند + فقط یک listener برای دکمه بازگشت (با cleanup)
   useEffect(() => {
     void applyNativeChrome();
-    onBackButton(() => {
-      const isRoot = ['/', '/login', '/mechanic', '/courier'].includes(location.pathname);
-      if (isRoot) return false; // اجازه خروج به سیستم‌عامل
+    let cleanup: (() => void) | undefined;
+    void onBackButton(() => {
+      const current = pathRef.current;
+      const isRoot = ['/', '/login', '/register', '/mechanic', '/courier', '/seller'].includes(current);
+      if (isRoot) return false; // رفتار پیش‌فرض سیستم (خروج از اپ در صفحه اصلی)
       navigate(-1);
       return true;
+    }).then((dispose) => {
+      cleanup = dispose;
     });
-  }, [navigate, location.pathname]);
+    return () => cleanup?.();
+  }, [navigate]);
 
-  // اعلان فشاری: پس از ورود توکن دستگاه ثبت می‌شود؛ پس از خروج حذف می‌شود
+  // اعلان فشاری: فقط وقتی کاربر وارد شده (و با تأخیر تا آماده شدن کامل UI)
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
-    async function syncPush(): Promise<void> {
-      const saved = localStorage.getItem(PUSH_TOKEN_KEY);
-      if (!user) {
-        if (saved) {
-          await api.notifications.unregisterDeviceToken(saved).catch(() => undefined);
-          localStorage.removeItem(PUSH_TOKEN_KEY);
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const registered = await registerPushToken();
+          if (cancelled || !registered) return;
+          await api.notifications
+            .registerDeviceToken({
+              token: registered.token,
+              platform: platformName(),
+              appFlavor: hasRole(user, 'courier') ? 'courier' : hasRole(user, 'seller') ? 'seller' : 'mechanic',
+            })
+            .then(() => localStorage.setItem(PUSH_TOKEN_KEY, registered.token))
+            .catch(() => undefined);
+        } catch {
+          /* اعلان فشاری هرگز نباید اپ را بشکند */
         }
-        await unregisterPushToken().catch(() => undefined);
-        return;
-      }
-      const registered = await registerPushToken();
-      if (cancelled || !registered) return;
-      await api.notifications
-        .registerDeviceToken({ token: registered.token, platform: platformName(), appFlavor: hasRole(user, 'courier') ? 'courier' : 'mechanic' })
-        .then(() => localStorage.setItem(PUSH_TOKEN_KEY, registered.token))
-        .catch(() => undefined);
-    }
-    void syncPush();
+      })();
+    }, 2500);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [user]);
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={hasRole(user, 'mechanic') ? '/mechanic' : '/courier'} replace /> : <LoginPage />} />
+      <Route path="/login" element={user ? <Navigate to={homeFor(user)} replace /> : <LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
       <Route path="/mechanic" element={<RequireRole role="mechanic"><MechanicHome /></RequireRole>} />
@@ -91,7 +113,14 @@ export default function App(): JSX.Element {
       <Route path="/courier/earnings" element={<RequireRole role="courier"><CourierEarningsPage /></RequireRole>} />
       <Route path="/courier/profile" element={<RequireRole role="courier"><CourierProfilePage /></RequireRole>} />
 
-      <Route path="*" element={<Navigate to={user ? (hasRole(user, 'mechanic') ? '/mechanic' : '/courier') : '/login'} replace />} />
+      <Route path="/seller" element={<RequireRole role="seller"><SellerHome /></RequireRole>} />
+      <Route path="/seller/products" element={<RequireRole role="seller"><SellerProducts /></RequireRole>} />
+      <Route path="/seller/orders" element={<RequireRole role="seller"><SellerOrders /></RequireRole>} />
+      <Route path="/seller/requests" element={<RequireRole role="seller"><SellerRequests /></RequireRole>} />
+      <Route path="/seller/finance" element={<RequireRole role="seller"><SellerFinance /></RequireRole>} />
+      <Route path="/seller/profile" element={<RequireRole role="seller"><SellerProfile /></RequireRole>} />
+
+      <Route path="*" element={<Navigate to={homeFor(user)} replace />} />
     </Routes>
   );
 }
