@@ -23,6 +23,7 @@ export function PublicLayout({ children, wide = false }: { children: ReactNode; 
 
           <nav className="mr-4 hidden items-center gap-5 text-xs font-bold text-slate-600 xl:flex" aria-label="بخش‌های صفحه">
             <Link to="/#roles" className="hover:text-primary">راهکارها</Link>
+            <Link to="/#benefits" className="hover:text-primary">مزایا برای شما</Link>
             <Link to="/#features" className="hover:text-primary">امکانات</Link>
             <Link to="/#how" className="hover:text-primary">نحوه کار</Link>
             <Link to="/#download" className="hover:text-primary">دانلود اپ</Link>

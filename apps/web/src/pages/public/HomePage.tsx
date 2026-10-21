@@ -48,6 +48,57 @@ const capabilities = [
   { icon: '◇', title: 'امنیت نقش‌محور', text: 'مجوزها در سرور کنترل می‌شوند و عملیات حساس در گزارش ممیزی ثبت می‌گردند.' },
 ] as const;
 
+const audienceBenefits = [
+  {
+    id: 'buyer-benefits',
+    label: 'برای خریدار قطعه',
+    title: 'خرید قطعه از حدس‌زدن به یک انتخاب آگاهانه تبدیل می‌شود',
+    description:
+      'کارپارت اطلاعات قطعه، پیشنهاد فروشنده‌ها و وضعیت سفارش را در یک مسیر کنار هم می‌آورد؛ خریدار به‌جای جست‌وجوی پراکنده، گزینه‌ها را با معیارهای روشن بررسی می‌کند.',
+    image: publicAsset('mechanic.webp'),
+    imageAlt: 'نسخه خریدار و مکانیک کارپارت برای جست‌وجو و مقایسه قطعه',
+    tone: 'buyer',
+    highlights: ['پیدا کردن با نام، کد فنی یا OEM', 'مقایسهٔ قیمت، موجودی و سابقهٔ فروشنده', 'مشاهدهٔ مرحله‌به‌مرحلهٔ وضعیت سفارش'],
+    outcomes: [
+      ['انتخاب مطمئن‌تر', 'اطلاعات سازگاری و پیشنهادها پیش از خرید کنار هم دیده می‌شوند.'],
+      ['رفت‌وآمد کمتر', 'جست‌وجو، استعلام و پیگیری در یک تجربهٔ واحد انجام می‌شود.'],
+      ['شفافیت بیشتر', 'قیمت به تومان، موجودی و وضعیت ارسال جدا و روشن نمایش داده می‌شوند.'],
+    ],
+  },
+  {
+    id: 'seller-benefits',
+    label: 'برای تأمین‌کننده و لوازم یدکی',
+    title: 'تقاضای واقعی را منظم‌تر ببینید و فروش را حرفه‌ای‌تر مدیریت کنید',
+    description:
+      'فروشگاه و تأمین‌کننده می‌توانند کالا، قیمت و موجودی را مدیریت کنند، به استعلام‌های مرتبط پاسخ بدهند و مسیر سفارش تا تسویه را بدون پراکندگی دنبال کنند.',
+    image: publicAsset('seller.webp'),
+    imageAlt: 'پنل فروشنده کارپارت برای مدیریت کالا، سفارش و امور مالی',
+    tone: 'seller',
+    highlights: ['دسترسی به درخواست‌های خرید مرتبط', 'مدیریت کالا، قیمت و موجودی', 'پیگیری سفارش، مرجوعی و وضعیت تسویه'],
+    outcomes: [
+      ['فرصت فروش بیشتر', 'درخواست خریدار و مکانیک به فروشنده‌ای می‌رسد که امکان تأمین دارد.'],
+      ['پاسخ‌گویی سریع‌تر', 'استعلام‌ها و پیشنهاد قیمت در یک جریان مشخص ثبت و پیگیری می‌شوند.'],
+      ['کنترل عملیاتی بهتر', 'سفارش، آماده‌سازی، تحویل به پیک و امور مالی از هم گم نمی‌شوند.'],
+    ],
+  },
+  {
+    id: 'mechanic-benefits',
+    label: 'برای مکانیک',
+    title: 'زمان کمتری صرف پیدا کردن قطعه؛ تمرکز بیشتر روی تعمیر خودرو',
+    description:
+      'مکانیک نیاز قطعه را یک‌بار ثبت می‌کند و می‌تواند پیشنهاد چند فروشنده را بررسی کند. تاریخچهٔ درخواست و سفارش نیز برای پیگیری مشتری و ادامهٔ کار در دسترس می‌ماند.',
+    image: publicAsset('mechanic.webp'),
+    imageAlt: 'اپ مکانیک کارپارت برای ثبت استعلام و تأمین قطعه خودرو',
+    tone: 'mechanic',
+    highlights: ['یک استعلام برای چند فروشنده', 'مقایسه قبل از تأیید پیشنهاد', 'پیگیری تأمین و ارسال بدون تماس‌های تکراری'],
+    outcomes: [
+      ['وقفهٔ کاری کمتر', 'فرایند تأمین قطعه از تماس‌ها و پیام‌های پراکنده به یک مسیر مشخص منتقل می‌شود.'],
+      ['هماهنگی ساده‌تر', 'وضعیت سفارش و ارسال برای برنامه‌ریزی تعمیر قابل مشاهده است.'],
+      ['اعتماد مشتری', 'انتخاب قطعه و قیمت با اطلاعات روشن‌تری برای مشتری توضیح داده می‌شود.'],
+    ],
+  },
+] as const;
+
 const faqs = [
   ['کارپارت برای چه کسانی ساخته شده است؟', 'برای مکانیک‌ها و خریداران قطعه، فروشندگان و تأمین‌کنندگان، پیک‌ها و تیم مدیریت بازار. هر نقش، وب‌اپ و تجربهٔ متناسب خود را دارد.'],
   ['ترتیب نمایش فروشندگان چگونه تعیین می‌شود؟', 'رتبه‌بندی بر اساس معیارهای شفاف مانند قیمت، موجودی، امتیاز و فاصله انجام می‌شود. کمیسیون فروشنده در جایگاه پیشنهاد اثر ندارد.'],
@@ -157,6 +208,49 @@ export default function HomePage(): JSX.Element {
             </article>
           ))}
         </div>
+      </section>
+
+      <section id="benefits" className="landing-section" aria-labelledby="benefits-title">
+        <div className="landing-section-heading">
+          <div><p>کارپارت چه تغییری ایجاد می‌کند؟</p><h2 id="benefits-title">سود واقعی برای هر حلقهٔ بازار قطعه</h2></div>
+          <p>مزیت کارپارت فقط آنلاین‌کردن خرید نیست؛ اطلاعات پراکنده را به یک فرایند قابل مقایسه و پیگیری تبدیل می‌کند.</p>
+        </div>
+
+        <div className="mt-10 space-y-7">
+          {audienceBenefits.map((audience, index) => (
+            <article key={audience.id} id={audience.id} className={`landing-benefit landing-benefit--${audience.tone}`}>
+              <div className={`landing-benefit__visual ${index % 2 ? 'lg:order-2' : ''}`}>
+                <div className="landing-benefit__halo" aria-hidden="true" />
+                <img src={audience.image} width="440" height="440" loading="lazy" alt={audience.imageAlt} />
+                <div className="landing-benefit__caption">
+                  <span aria-hidden="true">✓</span>
+                  <div><b>{audience.label}</b><small>{audience.highlights[0]}</small></div>
+                </div>
+              </div>
+
+              <div className={`landing-benefit__content ${index % 2 ? 'lg:order-1' : ''}`}>
+                <p className="landing-eyebrow">{audience.label}</p>
+                <h3>{audience.title}</h3>
+                <p className="landing-benefit__description">{audience.description}</p>
+                <ul className="landing-benefit__highlights" aria-label={`قابلیت‌های ${audience.label}`}>
+                  {audience.highlights.map((highlight) => <li key={highlight}><span aria-hidden="true">●</span>{highlight}</li>)}
+                </ul>
+                <div className="landing-benefit__outcomes">
+                  {audience.outcomes.map(([title, text]) => (
+                    <div key={title}><b>{title}</b><p>{text}</p></div>
+                  ))}
+                </div>
+                {isStaticLanding ? (
+                  <a href="https://github.com/rahmaniho/CarPart/releases/latest" target="_blank" rel="noreferrer" className="landing-benefit__action">مشاهده و دریافت نسخهٔ مرتبط <span aria-hidden="true">↗</span></a>
+                ) : (
+                  <Link to={audience.tone === 'seller' ? '/register' : '/search'} className="landing-benefit__action">{audience.tone === 'seller' ? 'شروع همکاری با کارپارت' : 'جست‌وجوی قطعه'} <span aria-hidden="true">←</span></Link>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p className="landing-benefit-note">میزان صرفه‌جویی یا افزایش فروش به موجودی، قیمت‌گذاری، شهر، کیفیت پاسخ‌گویی و شرایط هر کسب‌وکار وابسته است؛ کارپارت عدد یا سود تضمینی اعلام نمی‌کند.</p>
       </section>
 
       <section id="features" className="landing-section rounded-[2rem] bg-slate-950 px-5 py-10 text-white sm:px-10 sm:py-14">
