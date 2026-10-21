@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { DataType, newDb } from 'pg-mem';
 import { InitialPostgresSchema1761011200000 } from '../../src/database/migrations/1761011200000-InitialPostgresSchema';
 import { MultiSellerOrderHierarchy1792540800000 } from '../../src/database/migrations/1792540800000-MultiSellerOrderHierarchy';
+import { IdempotentPaidOrderEffects1792544400000 } from '../../src/database/migrations/1792544400000-IdempotentPaidOrderEffects';
 
 /**
  * این آزمون PostgreSQL واقعی نیست؛ parser/constraintهای PostgreSQL را با pg-mem بررسی می‌کند.
@@ -25,7 +26,11 @@ describe('مهاجرت baseline پایگاه PostgreSQL', () => {
       type: 'postgres',
       database: 'carpart_test',
       entities: [],
-      migrations: [InitialPostgresSchema1761011200000, MultiSellerOrderHierarchy1792540800000],
+      migrations: [
+        InitialPostgresSchema1761011200000,
+        MultiSellerOrderHierarchy1792540800000,
+        IdempotentPaidOrderEffects1792544400000,
+      ],
       migrationsTableName: 'schema_migrations',
     });
 
@@ -35,6 +40,7 @@ describe('مهاجرت baseline پایگاه PostgreSQL', () => {
       expect((applied as Array<{ name: string }>).map((item) => item.name)).toEqual([
         'InitialPostgresSchema1761011200000',
         'MultiSellerOrderHierarchy1792540800000',
+        'IdempotentPaidOrderEffects1792544400000',
       ]);
 
       const tables = (await dataSource.query(
@@ -62,6 +68,10 @@ describe('مهاجرت baseline پایگاه PostgreSQL', () => {
       )) as Array<{ orderKind: string; sellerId: string | null; branchId: string | null }>;
       expect(aggregate).toEqual([{ orderKind: 'parent', sellerId: null, branchId: null }]);
       await dataSource.query(`DELETE FROM "orders" WHERE "id" = $1`, [aggregateId]);
+
+      await dataSource.undoLastMigration({ transaction: 'all' });
+      await expect(dataSource.query(`SELECT "paidEffectsAppliedAt" FROM "orders"`)).rejects.toThrow();
+      expect(await dataSource.query(`SELECT "orderKind" FROM "orders"`)).toEqual([]);
 
       await dataSource.undoLastMigration({ transaction: 'all' });
       await expect(dataSource.query(`SELECT "orderKind" FROM "orders"`)).rejects.toThrow();

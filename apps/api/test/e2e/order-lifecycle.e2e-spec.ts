@@ -6,6 +6,7 @@ import { OrdersService } from '../../src/modules/orders/orders.service';
 import { SellerProduct } from '../../src/modules/sellers/entities/seller-product.entity';
 import { InventoryMovement } from '../../src/modules/sellers/entities/inventory-movement.entity';
 import { PaymentEvent } from '../../src/modules/payments/entities/payment-event.entity';
+import { Refund } from '../../src/modules/payments/entities/refund.entity';
 import { DEMO, createTestApp, login, waitFor, type Session, type TestContext } from './app.helper';
 
 /**
@@ -303,6 +304,7 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
     expect(parent.paymentStatus).toBe('SUCCESS');
     expect(children).toHaveLength(2);
     expect(children.every((child) => child.status === 'PAID' && child.paymentId === parent.paymentId)).toBe(true);
+    expect(children.every((child) => child.paidEffectsAppliedAt instanceof Date)).toBe(true);
     expect(await dataSource.getRepository(Commission).countBy({ orderId: In(childIds) })).toBe(2);
     expect(await dataSource.getRepository(Commission).countBy({ orderId: parent.id })).toBe(0);
 
@@ -311,6 +313,24 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
       expect(after.stock).toBe(before.get(productId)!.stock - 1);
       expect(after.reservedStock).toBe(before.get(productId)!.reservedStock - 1);
     }
+
+    // شبیه‌سازی توقف نسخه قدیمی پس از ثبت Sale/Commission ولی پیش از Checkpoint؛
+    // Callback تکراری باید Checkpoint را ترمیم کند و موجودی را دوباره کم نکند.
+    const interruptedChild = children[0];
+    const priorSale = await dataSource.getRepository(InventoryMovement).findOneOrFail({
+      where: { orderId: interruptedChild.id, reason: 'sale' },
+    });
+    await dataSource.getRepository(Order).update({ id: interruptedChild.id }, { paidEffectsAppliedAt: null });
+    const stockBeforeReplay = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: priorSale.sellerProductId } });
+    await ctx.http
+      .post('/api/v1/payments/sandbox/confirm')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId: parent.id, decision: 'paid' })
+      .expect(201);
+    const stockAfterReplay = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: priorSale.sellerProductId } });
+    expect(stockAfterReplay.stock).toBe(stockBeforeReplay.stock);
+    expect(await dataSource.getRepository(InventoryMovement).countBy({ orderId: interruptedChild.id, reason: 'sale' })).toBe(1);
+    expect((await dataSource.getRepository(Order).findOneOrFail({ where: { id: interruptedChild.id } })).paidEffectsAppliedAt).toBeInstanceOf(Date);
   }, 120_000);
 
   it('۴) پرداخت آزمایشی سفارش را PAID می‌کند و کارمزد پلتفرم ثبت می‌شود', async () => {
@@ -456,6 +476,49 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
     expect(after!.reservedStock).toBe(before!.reservedStock - 1);
     expect(after!.stock).toBe(before!.stock);
   }, 90_000);
+
+  it('۶-ب) موفقیت دیرهنگام پس از انقضا موجودی را مصرف نمی‌کند و یک Refund قابل‌حسابرسی می‌سازد', async () => {
+    const offer = await pickOffer(1);
+    const addressId = await defaultAddressId();
+    const created = await createOrder(
+      mechanic,
+      { items: [{ sellerProductId: offer.sellerProductId, quantity: 1 }], deliveryAddressId: addressId },
+      { 'Idempotency-Key': `t-late-pay-${Date.now()}` },
+    );
+    const orderId = created.body.id as string;
+    const initiation = await ctx.http
+      .post('/api/v1/payments')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId })
+      .expect(201);
+    const orders = ctx.app.get(OrdersService);
+    await orders.expireOrderIfUnpaid(orderId, new Date(Date.now() + 60 * 60_000));
+    const stockAfterRelease = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: offer.sellerProductId } });
+
+    await ctx.http
+      .post('/api/v1/payments/sandbox/confirm')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId, decision: 'paid' })
+      .expect(201);
+    await ctx.http
+      .post('/api/v1/payments/sandbox/confirm')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId, decision: 'paid' })
+      .expect(201);
+
+    const order = await dataSource.getRepository(Order).findOneOrFail({ where: { id: orderId } });
+    const stockAfterCallbacks = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: offer.sellerProductId } });
+    expect(order.status).toBe('CANCELLED');
+    expect(order.paymentStatus).toBe('SUCCESS');
+    expect(order.paidEffectsAppliedAt).toBeNull();
+    expect(stockAfterCallbacks.stock).toBe(stockAfterRelease.stock);
+    expect(stockAfterCallbacks.reservedStock).toBe(stockAfterRelease.reservedStock);
+    expect(await dataSource.getRepository(Commission).countBy({ orderId })).toBe(0);
+    const refunds = await dataSource.getRepository(Refund).find({ where: { paymentId: initiation.body.paymentId } });
+    expect(refunds).toHaveLength(1);
+    expect(refunds[0]).toMatchObject({ orderId, amount: created.body.payableTotal, status: 'REQUESTED' });
+    expect(refunds[0].idempotencyKey).toBe(`late-payment:${initiation.body.paymentId}`);
+  }, 120_000);
 
   it('۷) تغییر وضعیت نامجاز و نقش نامجاز از سمت کاربر رد می‌شود', async () => {
     const offer = await pickOffer(1);

@@ -99,7 +99,7 @@ jobs:
           source_orders=$(psql -h localhost -U carpart -d carpart -Atc 'SELECT COUNT(*) FROM orders')
           source_migrations=$(psql -h localhost -U carpart -d carpart -Atc 'SELECT COUNT(*) FROM schema_migrations')
           test "$source_orders" -gt 0
-          test "$source_migrations" -eq 2
+          test "$source_migrations" -eq 3
           pg_dump -h localhost -U carpart -d carpart --format=custom --no-owner --no-acl --file=/tmp/carpart.dump
           createdb -h localhost -U carpart carpart_restore
           pg_restore -h localhost -U carpart -d carpart_restore --no-owner --no-acl --exit-on-error /tmp/carpart.dump

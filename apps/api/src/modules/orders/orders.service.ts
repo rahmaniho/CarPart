@@ -1093,9 +1093,10 @@ export class OrdersService {
   async markPaid(orderId: string, payment: Payment): Promise<Order> {
     const order = await this.loadOrder(orderId);
     if (order.paymentStatus === 'SUCCESS') {
-      // A prior callback may have persisted the aggregate payment before all child
-      // effects completed. Reconciliation is idempotent and finishes the fan-out.
-      if (order.orderKind === 'parent') await this.onPaid(order);
+      // Callback replay is also the recovery path after a process crash. Only paid
+      // orders may apply fulfillment effects; a late payment on a cancelled order
+      // is handled by PaymentsService as a refund request.
+      if (order.status === 'PAID') await this.onPaid(order);
       return this.loadOrder(orderId);
     }
     order.paymentId = payment.id;
@@ -1126,6 +1127,9 @@ export class OrdersService {
         }
         if (child.status === 'WAITING_FOR_PAYMENT' || child.status === 'PAYMENT_FAILED') {
           await this.systemTransition(child.id, 'PAID', 'پرداخت موفق سفارش تجمیعی', { parentOrderId: order.id });
+        } else if (child.status === 'PAID') {
+          // Reconcile a crash after status persistence but before stock/commission.
+          await this.onPaid(child);
         }
       }
       await this.notifyOwner(order, 'order.paid', { code: order.code, orderId: order.id, mode: order.paymentStatus ?? 'online' });
@@ -1134,13 +1138,17 @@ export class OrdersService {
     if (!order.sellerId || !order.branchId) {
       throw new AppException('مرز فروشنده و شعبه برای بستهٔ سفارش نامعتبر است.', ErrorCodes.CONFLICT, { statusCode: 409 });
     }
+    const sellerId = order.sellerId;
+    const branchId = order.branchId;
     const items = await this.items.find({ where: { orderId: order.id } });
-    await this.sellerProducts.commit(
-      items.filter((item) => item.sellerProductId).map((item) => ({ sellerProductId: item.sellerProductId as string, quantity: item.quantity })),
-      order.id,
-    );
+    const stockByProduct = new Map<string, number>();
+    for (const item of items) {
+      if (item.sellerProductId) {
+        stockByProduct.set(item.sellerProductId, (stockByProduct.get(item.sellerProductId) ?? 0) + item.quantity);
+      }
+    }
 
-    const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
+    const seller = await this.sellers.findOne({ where: { id: sellerId } });
     const commission = await this.pricing.calculateCommission({
       itemsTotal: order.itemsSubtotal,
       discountTotal: order.discountTotal,
@@ -1148,27 +1156,81 @@ export class OrdersService {
       ratePercent: await this.pricing.commissionRatePercent(seller?.commissionPercent),
       courierSharePercent: await this.pricing.courierSharePercent(),
     });
-    const existing = await this.commissions.findOne({ where: { orderId: order.id } });
-    if (!existing) {
-      await this.commissions.save(
-        this.commissions.create({
-          orderId: order.id,
-          sellerId: order.sellerId,
-          branchId: order.branchId,
-          itemsTotal: order.itemsSubtotal,
-          discountTotal: order.discountTotal,
-          deliveryFee: order.deliveryFee,
-          commissionBase: commission.commissionBase,
-          ratePercent: commission.ratePercent,
-          platformAmount: commission.platformAmount,
-          sellerNetAmount: commission.sellerNetAmount,
-          courierAmount: commission.courierAmount,
-          deliveryPlatformAmount: commission.deliveryPlatformAmount,
-          status: 'recorded',
-          calculation: commission.calculation,
-        }),
-      );
-    }
+
+    await runInTransaction(this.dataSource, async (manager) => {
+      const orderRepo = manager.getRepository(Order);
+      const current = this.dataSource.options.type === 'postgres'
+        ? await orderRepo.createQueryBuilder('order').setLock('pessimistic_write').where('order.id = :id', { id: order.id }).getOne()
+        : await orderRepo.findOne({ where: { id: order.id } });
+      if (!current) throw new NotFoundException('سفارش');
+      if (current.paidEffectsAppliedAt) return;
+
+      const productRepo = manager.getRepository(SellerProduct);
+      const movementRepo = manager.getRepository(InventoryMovement);
+      for (const [sellerProductId, quantity] of stockByProduct) {
+        // Compatibility recovery for an order committed by an older version just
+        // before a crash: an audited sale movement proves stock was already moved.
+        const priorSale = await movementRepo.findOne({ where: { sellerProductId, orderId: current.id, reason: 'sale' } });
+        if (priorSale) continue;
+        const result = await productRepo
+          .createQueryBuilder()
+          .update(SellerProduct)
+          .set({
+            stock: () => '"stock" - :qty',
+            reservedStock: () => '"reservedStock" - :qty',
+            stockUpdatedAt: new Date(),
+            version: () => '"version" + 1',
+          })
+          .where('id = :id AND "stock" >= :qty AND "reservedStock" >= :qty', { id: sellerProductId, qty: quantity })
+          .execute();
+        if (!result.affected) {
+          throw new AppException('رزرو موجودی برای قطعی‌سازی پرداخت معتبر نیست؛ نیازمند تطبیق دستی است.', ErrorCodes.STOCK_CONFLICT, {
+            statusCode: 409,
+            details: { orderId: current.id, sellerProductId, quantity },
+          });
+        }
+        const product = await productRepo.findOneByOrFail({ id: sellerProductId });
+        await movementRepo.save(
+          movementRepo.create({
+            sellerProductId,
+            branchId: product.branchId,
+            delta: -quantity,
+            stockAfter: product.stock,
+            reason: 'sale',
+            orderId: current.id,
+            note: `کسر اتمیک موجودی سفارش ${current.code}`,
+            actorId: null,
+            actorType: 'system',
+          }),
+        );
+      }
+
+      const commissionRepo = manager.getRepository(Commission);
+      const existing = await commissionRepo.findOne({ where: { orderId: current.id } });
+      if (!existing) {
+        await commissionRepo.save(
+          commissionRepo.create({
+            orderId: current.id,
+            sellerId,
+            branchId,
+            itemsTotal: order.itemsSubtotal,
+            discountTotal: order.discountTotal,
+            deliveryFee: order.deliveryFee,
+            commissionBase: commission.commissionBase,
+            ratePercent: commission.ratePercent,
+            platformAmount: commission.platformAmount,
+            sellerNetAmount: commission.sellerNetAmount,
+            courierAmount: commission.courierAmount,
+            deliveryPlatformAmount: commission.deliveryPlatformAmount,
+            status: 'recorded',
+            calculation: commission.calculation,
+          }),
+        );
+      }
+      current.paidEffectsAppliedAt = new Date();
+      await orderRepo.save(current);
+      order.paidEffectsAppliedAt = current.paidEffectsAppliedAt;
+    });
 
     await this.notifyOwner(order, 'order.paid', { code: order.code, orderId: order.id, mode: order.paymentStatus ?? 'online' });
     if (seller) {
