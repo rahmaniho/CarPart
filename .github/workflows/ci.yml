@@ -80,6 +80,7 @@ jobs:
       POSTGRES_DB: carpart
       POSTGRES_SSL: "false"
       PGPASSWORD: ci-postgres-password
+      TEST_LOGS: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -96,7 +97,8 @@ jobs:
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
-            message=$(tail -n 60 /tmp/postgres-e2e.log | sed 's/%/%25/g; s/\r/%0D/g' | awk '{printf "%s%%0A", $0}')
+            { grep -E 'query failed|QueryFailed|duplicate key|violates|ERROR|error:' /tmp/postgres-e2e.log | tail -n 30; tail -n 40 /tmp/postgres-e2e.log; } > /tmp/postgres-error-summary.log
+            message=$(sed 's/%/%25/g; s/\r/%0D/g' /tmp/postgres-error-summary.log | awk '{printf "%s%%0A", $0}')
             echo "::error file=apps/api/test/e2e/order-lifecycle.e2e-spec.ts::${message}"
             exit "$status"
           fi
