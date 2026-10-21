@@ -1,5 +1,6 @@
 import { In, type DataSource } from 'typeorm';
 import { CouponsService } from '../../src/modules/coupons/coupons.service';
+import { CouponRedemption } from '../../src/modules/coupons/entities/coupon-redemption.entity';
 import { Commission } from '../../src/modules/finance/entities/commission.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
 import { OrdersService } from '../../src/modules/orders/orders.service';
@@ -588,11 +589,11 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
       expect(created.body.payableTotal).toBe(created.body.itemsSubtotal + created.body.deliveryFee - created.body.discountTotal);
 
       await ctx.http.post(`/api/v1/orders/${created.body.id}/cancel`).set('Authorization', `Bearer ${mechanic.token}`).send({ reason: 'لغو آزمون کوپن' }).expect(201);
-      const redemption = await dataSource.query(
-        'SELECT status FROM coupon_redemptions WHERE orderId = ? ORDER BY createdAt DESC LIMIT 1',
-        [created.body.id],
-      );
-      expect((redemption as Array<{ status: string }>)[0]?.status).toBe('reversed');
+      const redemption = await dataSource.getRepository(CouponRedemption).findOne({
+        where: { orderId: created.body.id },
+        order: { createdAt: 'DESC' },
+      });
+      expect(redemption?.status).toBe('reversed');
     }
   }, 90_000);
 
