@@ -472,7 +472,7 @@ export class SearchService {
       .createQueryBuilder('review')
       .select('review.targetId', 'sellerId')
       .addSelect('COUNT(1)', 'total')
-      .addSelect('SUM(CASE WHEN review.hadIssue = 1 THEN 1 ELSE 0 END)', 'issues')
+      .addSelect('SUM(CASE WHEN review.hadIssue THEN 1 ELSE 0 END)', 'issues')
       .where('review.targetType = :type', { type: 'seller' })
       .andWhere('review.targetId IN (:...ids)', { ids })
       .groupBy('review.targetId')

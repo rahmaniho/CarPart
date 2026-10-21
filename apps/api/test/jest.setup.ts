@@ -10,9 +10,12 @@ process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'test-refresh
 process.env.DATA_ENCRYPTION_KEY = process.env.DATA_ENCRYPTION_KEY ?? 'a'.repeat(64);
 process.env.PAYMENT_SANDBOX_SECRET = process.env.PAYMENT_SANDBOX_SECRET ?? 'test-sandbox-payment-secret';
 process.env.AUTH_EXPOSE_DEV_OTP = 'true';
-process.env.DB_TYPE = 'sqljs';
+// اجرای عادی سریع و in-memory است؛ CI با TEST_DB_TYPE=postgres همان E2Eها را
+// روی PostgreSQL واقعی و migrationهای production اجرا می‌کند.
+process.env.DB_TYPE = process.env.TEST_DB_TYPE === 'postgres' ? 'postgres' : 'sqljs';
 process.env.DB_SQLJS_FILE = ':memory:';
-process.env.DB_SYNC = 'true';
+process.env.DB_SYNC = process.env.DB_TYPE === 'postgres' ? 'false' : 'true';
+process.env.DB_MIGRATIONS_RUN = process.env.DB_TYPE === 'postgres' ? 'true' : 'false';
 process.env.PAYMENT_PROVIDER = 'sandbox';
 process.env.MAP_PROVIDER = 'mock';
 process.env.SMS_PROVIDER = 'mock';

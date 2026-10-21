@@ -1,5 +1,6 @@
 import { InitialPostgresSchema1761011200000 } from './migrations/1761011200000-InitialPostgresSchema';
 import { MultiSellerOrderHierarchy1792540800000 } from './migrations/1792540800000-MultiSellerOrderHierarchy';
+import { IdempotentPaidOrderEffects1792544400000 } from './migrations/1792544400000-IdempotentPaidOrderEffects';
 
 /**
  * فهرست صریح مهاجرت‌ها تا خروجی TypeScript و اجرای Docker رفتار یکسانی داشته باشند.
@@ -10,4 +11,5 @@ import { MultiSellerOrderHierarchy1792540800000 } from './migrations/17925408000
 export const MIGRATIONS: Function[] = [
   InitialPostgresSchema1761011200000,
   MultiSellerOrderHierarchy1792540800000,
+  IdempotentPaidOrderEffects1792544400000,
 ];

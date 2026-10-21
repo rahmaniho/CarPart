@@ -111,7 +111,12 @@ export class NotificationsService {
         continue;
       }
 
-      // کانال‌های برون‌سازمانی: رکورد در حالت pending و پردازش از طریق صف (با تلاش مجدد)
+      // کانال‌های برون‌سازمانی: بررسی سریع از ثبت تکراری و نویز خطای Unique در
+      // callbackهای idempotent جلوگیری می‌کند؛ قید Unique همچنان گارد نهایی Race است.
+      if (await this.repo.exists({ where: { dedupeKey } })) {
+        duplicated += 1;
+        continue;
+      }
       const pending = await this.repo.save(
         this.repo.create({
           userId: input.userId,

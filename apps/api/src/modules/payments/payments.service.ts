@@ -10,6 +10,7 @@ import { OrdersService } from '../orders/orders.service';
 import { SystemSettingsService } from '../settings/system-settings.service';
 import { PaymentEvent } from './entities/payment-event.entity';
 import { Payment } from './entities/payment.entity';
+import { Refund } from './entities/refund.entity';
 import type { PaymentProvider, PaymentVerifyResult, ProviderReadiness } from './payment-provider.interface';
 import { SandboxPaymentProvider } from './providers/sandbox.provider';
 import { ZarinpalPaymentProvider } from './providers/zarinpal.provider';
@@ -46,6 +47,7 @@ export class PaymentsService {
   constructor(
     @InjectRepository(Payment) private readonly payments: Repository<Payment>,
     @InjectRepository(PaymentEvent) private readonly events: Repository<PaymentEvent>,
+    @InjectRepository(Refund) private readonly refunds: Repository<Refund>,
     @Inject(CONFIG_TOKEN) private readonly config: AppConfig,
     private readonly orders: OrdersService,
     private readonly notifications: NotificationsService,
@@ -215,10 +217,11 @@ export class PaymentsService {
             retryable: true,
           });
         }
-        // بازیابی پس از توقف پردازش قبلی: markPaid ذاتاً تکرارپذیر است.
-        await this.orders.markPaid(payment.orderId, payment);
       }
-      const updatedOrder = await this.orders.loadOrder(payment.orderId);
+      // Always reconcile: paymentStatus may already be SUCCESS while one child
+      // crashed before its atomic stock/commission checkpoint.
+      const updatedOrder = await this.orders.markPaid(payment.orderId, payment);
+      await this.ensureLatePaymentRefund(payment, updatedOrder);
       return { payment, orderStatus: updatedOrder.status, alreadyProcessed: true };
     }
     if (payment.expiresAt && payment.expiresAt < new Date() && payment.status !== 'FAILED') {
@@ -253,8 +256,8 @@ export class PaymentsService {
     if (!claim.affected) {
       const current = await this.payments.findOne({ where: { id: payment.id } });
       if (current?.status === 'SUCCESS') {
-        await this.orders.markPaid(current.orderId, current);
-        const currentOrder = await this.orders.loadOrder(current.orderId);
+        const currentOrder = await this.orders.markPaid(current.orderId, current);
+        await this.ensureLatePaymentRefund(current, currentOrder);
         return { payment: current, orderStatus: currentOrder.status, alreadyProcessed: true };
       }
       if (current?.status === 'VERIFYING') {
@@ -294,8 +297,8 @@ export class PaymentsService {
       // ثبت SUCCESS پیش از گذار سفارش برای عبور گارد paymentConfirmed لازم است.
       // درخواست‌های هم‌زمان تا پایان lock window وارد مسیر بازیابی نمی‌شوند.
       await this.payments.save(payment);
-      await this.orders.markPaid(payment.orderId, payment);
-      const updatedOrder = await this.orders.loadOrder(payment.orderId);
+      const updatedOrder = await this.orders.markPaid(payment.orderId, payment);
+      await this.ensureLatePaymentRefund(payment, updatedOrder);
       if (updatedOrder.payableTotal !== payment.amount) {
         this.logger.warn(`مبلغ تراکنش ${payment.referenceId} با مبلغ سفارش ${updatedOrder.code} مطابقت ندارد.`);
       }
@@ -413,6 +416,38 @@ export class PaymentsService {
       await this.recordEvent(payment.id, 'expired', 'internal', null);
     }
     return stale.length;
+  }
+
+  private async ensureLatePaymentRefund(
+    payment: Payment,
+    order: { id: string; userId: string; status: string },
+  ): Promise<void> {
+    if (order.status !== 'CANCELLED') return;
+    const amount = payment.amount - payment.refundedAmount;
+    if (amount <= 0) return;
+    const idempotencyKey = `late-payment:${payment.id}`;
+    const existing = await this.refunds.findOne({ where: { idempotencyKey } });
+    if (existing) return;
+    try {
+      await this.refunds.save(
+        this.refunds.create({
+          paymentId: payment.id,
+          orderId: order.id,
+          userId: order.userId,
+          amount,
+          status: 'REQUESTED',
+          reason: 'پرداخت موفق پس از انقضا یا لغو سفارش',
+          note: 'ایجاد خودکار برای جلوگیری از تحقق مالی سفارش لغوشده',
+          requestedBy: null,
+          requestedAt: new Date(),
+          idempotencyKey,
+        }),
+      );
+      await this.recordEvent(payment.id, 'late_success_refund_requested', 'internal', { orderId: order.id, amount });
+    } catch (error) {
+      // Concurrent callbacks race on the unique idempotency key; the winner is sufficient.
+      if (!(await this.refunds.findOne({ where: { idempotencyKey } }))) throw error;
+    }
   }
 
   async recordEvent(paymentId: string, event: string, source: 'gateway' | 'internal' | 'webhook', payload: Record<string, unknown> | null): Promise<void> {

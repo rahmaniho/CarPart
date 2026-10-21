@@ -293,8 +293,8 @@ export class SellerProductsService {
       const result = await this.products
         .createQueryBuilder()
         .update(SellerProduct)
-        .set({ reservedStock: () => 'reservedStock + :qty', version: () => 'version + 1' })
-        .where('id = :id AND stock - reservedStock >= :qty', { id: item.sellerProductId, qty: item.quantity })
+        .set({ reservedStock: () => '"reservedStock" + :qty', version: () => '"version" + 1' })
+        .where('id = :id AND "stock" - "reservedStock" >= :qty', { id: item.sellerProductId, qty: item.quantity })
         .execute();
 
       if (!result.affected) {
@@ -333,8 +333,8 @@ export class SellerProductsService {
         .createQueryBuilder()
         .update(SellerProduct)
         .set({
-          reservedStock: () => 'CASE WHEN reservedStock >= :qty THEN reservedStock - :qty ELSE 0 END',
-          version: () => 'version + 1',
+          reservedStock: () => 'CASE WHEN "reservedStock" >= :qty THEN "reservedStock" - :qty ELSE 0 END',
+          version: () => '"version" + 1',
         })
         .where('id = :id', { id: item.sellerProductId, qty: item.quantity })
         .execute();
@@ -350,10 +350,10 @@ export class SellerProductsService {
         .createQueryBuilder()
         .update(SellerProduct)
         .set({
-          stock: () => 'CASE WHEN stock >= :qty THEN stock - :qty ELSE 0 END',
-          reservedStock: () => 'CASE WHEN reservedStock >= :qty THEN reservedStock - :qty ELSE 0 END',
+          stock: () => 'CASE WHEN "stock" >= :qty THEN "stock" - :qty ELSE 0 END',
+          reservedStock: () => 'CASE WHEN "reservedStock" >= :qty THEN "reservedStock" - :qty ELSE 0 END',
           stockUpdatedAt: new Date(),
-          version: () => 'version + 1',
+          version: () => '"version" + 1',
         })
         .where('id = :id', { id: item.sellerProductId, qty: item.quantity })
         .execute();
@@ -367,7 +367,7 @@ export class SellerProductsService {
     await this.products
       .createQueryBuilder()
       .update(SellerProduct)
-      .set({ stock: () => 'stock + :qty', stockUpdatedAt: new Date(), version: () => 'version + 1' })
+      .set({ stock: () => '"stock" + :qty', stockUpdatedAt: new Date(), version: () => '"version" + 1' })
       .where('id = :id', { id: sellerProductId, qty: quantity })
       .execute();
     const product = await this.products.findOne({ where: { id: sellerProductId } });

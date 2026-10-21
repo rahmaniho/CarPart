@@ -109,6 +109,10 @@ export class Order extends BaseEntity {
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   paidAt!: Date | null;
 
+  /** پایان اتمیک اثرهای محلی پرداخت: کسر موجودی و ثبت کمیسیون بسته. */
+  @Column({ type: DATE_COLUMN_TYPE, nullable: true })
+  paidEffectsAppliedAt!: Date | null;
+
   /* ------------------------- اطلاعات تحویل ------------------------- */
   @Column({ type: 'uuid', nullable: true })
   deliveryAddressId!: string | null;
