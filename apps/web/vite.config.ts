@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  // GitHub Project Pages روی /CarPart/ سرو می‌شود؛ Docker و توسعه از / استفاده می‌کنند.
+  base: process.env.VITE_BASE_PATH?.trim() || '/',
   plugins: [react()],
   server: {
     host: '0.0.0.0',
@@ -19,9 +21,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+          // Recharts به‌صورت طبیعی داخل dependency مسیر lazy مدیریت باقی می‌ماند
+          // تا مرورگر بازدیدکنندهٔ لندینگ آن را preload نکند.
           if (id.includes('@tanstack/react-query')) return 'vendor-query';
-          if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/')) return 'vendor-react';
+          if (id.includes('react-router') || id.includes('react-dom') || id.includes('/react/'))
+            return 'vendor-react';
           return undefined;
         },
       },
