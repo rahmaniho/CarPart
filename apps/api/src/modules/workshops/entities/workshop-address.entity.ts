@@ -6,7 +6,7 @@ import { Workshop } from './workshop.entity';
 @Entity('workshop_addresses')
 export class WorkshopAddress extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   workshopId!: string;
 
   @ManyToOne(() => Workshop, { onDelete: 'CASCADE' })

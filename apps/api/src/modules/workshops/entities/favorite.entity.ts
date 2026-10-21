@@ -8,13 +8,13 @@ export type FavoriteKind = 'part' | 'seller' | 'product' | 'request';
 @Index(['userId', 'kind', 'refId'], { unique: true })
 export class Favorite extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @Column({ length: 16 })
   kind!: FavoriteKind;
 
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   refId!: string;
 
   @Column({ type: 'varchar', length: 200, nullable: true })

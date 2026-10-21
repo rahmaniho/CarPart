@@ -15,7 +15,7 @@ export class PartCategory extends BaseEntity {
   slug!: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   parentId!: string | null;
 
   @ManyToOne(() => PartCategory, { onDelete: 'SET NULL', nullable: true })

@@ -3,8 +3,9 @@ import { CouponsService } from '../../src/modules/coupons/coupons.service';
 import { Commission } from '../../src/modules/finance/entities/commission.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
 import { OrdersService } from '../../src/modules/orders/orders.service';
-import { PaymentsService } from '../../src/modules/payments/payments.service';
 import { SellerProduct } from '../../src/modules/sellers/entities/seller-product.entity';
+import { InventoryMovement } from '../../src/modules/sellers/entities/inventory-movement.entity';
+import { PaymentEvent } from '../../src/modules/payments/entities/payment-event.entity';
 import { DEMO, createTestApp, login, waitFor, type Session, type TestContext } from './app.helper';
 
 /**
@@ -171,6 +172,49 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
     expect(product!.availableStock).toBe(productBefore!.availableStock);
   }, 90_000);
 
+  it('۴-ب) تأیید هم‌زمان پرداخت، موجودی و اثر مالی را فقط یک‌بار قطعی می‌کند', async () => {
+    const offer = await pickOffer(1);
+    const addressId = await defaultAddressId();
+    const created = await createOrder(
+      mechanic,
+      { items: [{ sellerProductId: offer.sellerProductId, quantity: 1 }], deliveryAddressId: addressId },
+      { 'Idempotency-Key': `t-pay-race-${Date.now()}` },
+    );
+    expect(created.status).toBe(201);
+    const orderId = created.body.id as string;
+    const productBefore = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: offer.sellerProductId } });
+
+    const initiation = await ctx.http
+      .post('/api/v1/payments')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId })
+      .expect(201);
+
+    const confirm = () =>
+      ctx.http
+        .post('/api/v1/payments/sandbox/confirm')
+        .set('Authorization', `Bearer ${mechanic.token}`)
+        .send({ orderId, decision: 'paid' });
+    const [first, second] = await Promise.all([confirm(), confirm()]);
+    expect([201, 409]).toContain(first.status);
+    expect([201, 409]).toContain(second.status);
+    expect([first.status, second.status].filter((status) => status === 201).length).toBeGreaterThanOrEqual(1);
+
+    const order = await dataSource.getRepository(Order).findOneOrFail({ where: { id: orderId } });
+    const productAfter = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: offer.sellerProductId } });
+    expect(order.status).toBe('PAID');
+    expect(order.paymentStatus).toBe('SUCCESS');
+    expect(productAfter.stock).toBe(productBefore.stock - 1);
+    expect(productAfter.reservedStock).toBe(productBefore.reservedStock - 1);
+    expect(await dataSource.getRepository(Commission).count({ where: { orderId } })).toBe(1);
+    expect(
+      await dataSource.getRepository(InventoryMovement).count({
+        where: { sellerProductId: offer.sellerProductId, reason: 'sale', orderId },
+      }),
+    ).toBe(1);
+    expect(await dataSource.getRepository(PaymentEvent).count({ where: { paymentId: initiation.body.paymentId, event: 'verify_success' } })).toBe(1);
+  }, 90_000);
+
   it('۵) تأیید پرداخت با امضای دستکاری‌شده رد می‌شود (تأیید سمت سرور)', async () => {
     const offer = await pickOffer(1);
     const addressId = await defaultAddressId();
@@ -312,7 +356,6 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
       { 'Idempotency-Key': `t-refund-${Date.now()}` },
     );
     const orderId = created.body.id as string;
-    const payments = ctx.app.get(PaymentsService);
     await ctx.http.post('/api/v1/payments').set('Authorization', `Bearer ${mechanic.token}`).send({ orderId }).expect(201);
     await ctx.http.post('/api/v1/payments/sandbox/confirm').set('Authorization', `Bearer ${mechanic.token}`).send({ orderId, decision: 'paid' }).expect(201);
 

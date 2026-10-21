@@ -22,31 +22,31 @@ export class Order extends BaseEntity {
   code!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   workshopId!: string | null;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   branchId!: string;
 
   @Index()
   @Column({ length: 32, default: 'DRAFT' })
   status!: OrderStatus;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   requestId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   quoteId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   parentOrderId!: string | null;
 
   /** منبع سفارش: خرید مستقیم از کاتالوگ یا انتخاب پیشنهاد */
@@ -80,21 +80,21 @@ export class Order extends BaseEntity {
   @Column({ type: 'varchar', length: 32, nullable: true })
   couponCode!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   couponId!: string | null;
 
   /* ------------------------------ پرداخت ------------------------------ */
   @Column({ type: 'varchar', length: 32, nullable: true })
   paymentStatus!: PaymentStatus | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   paymentId!: string | null;
 
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   paidAt!: Date | null;
 
   /* ------------------------- اطلاعات تحویل ------------------------- */
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   deliveryAddressId!: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
@@ -139,6 +139,6 @@ export class Order extends BaseEntity {
   @VersionColumn()
   version!: number;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 }

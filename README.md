@@ -52,6 +52,8 @@ npm run test -w @carpart/api          # تست‌های واحد + سرتاسر�
 npm run test -w @carpart/api-client   # تست‌های کلاینت (Vitest)
 npm run test -w @carpart/mobile       # تست‌های موبایل (Vitest + Testing Library)
 npm run test -w @carpart/web          # تست‌های وب (Vitest + Testing Library)
+npm run lint                           # ESLint 9 برای API، وب و موبایل
+npm run check:postgres-schema          # Entity + Migration با PostgreSQL driver
 python3 scripts/smoke_e2e.py          # آزمون دود روی سرور در حال اجرا
 ```
 
@@ -76,3 +78,4 @@ python3 scripts/smoke_e2e.py          # آزمون دود روی سرور در �
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | استقرار |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | نقشه راه نسخه‌های بعدی |
 | [docs/STATUS.md](docs/STATUS.md) | گزارش وضعیت: عملیاتی/آزمایشی/ناقص |
+| [docs/UPGRADE_AUDIT_2026-10-21.md](docs/UPGRADE_AUDIT_2026-10-21.md) | ممیزی A–E، اولویت P0–P3 و شواهد ارتقای عملیاتی |

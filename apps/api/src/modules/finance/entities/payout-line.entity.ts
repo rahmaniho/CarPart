@@ -6,7 +6,7 @@ import { Payout } from './payout.entity';
 @Entity('payout_lines')
 export class PayoutLine extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   payoutId!: string;
 
   @ManyToOne(() => Payout, { onDelete: 'CASCADE' })
@@ -16,10 +16,10 @@ export class PayoutLine extends BaseEntity {
   @Column({ length: 32 })
   kind!: 'sale' | 'delivery' | 'refund_reversal' | 'adjustment';
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   orderId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   deliveryId!: string | null;
 
   @Column({ type: 'bigint', transformer: moneyTransformer })

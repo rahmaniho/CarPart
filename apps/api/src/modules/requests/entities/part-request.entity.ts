@@ -36,11 +36,11 @@ export class PartRequest extends BaseEntity {
   code!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   workshopId!: string | null;
 
   @Index()
@@ -59,7 +59,7 @@ export class PartRequest extends BaseEntity {
   @Column({ type: 'varchar', length: 96, nullable: true })
   oemCode!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   categoryId!: string | null;
 
   @Column({ default: 1 })
@@ -81,7 +81,7 @@ export class PartRequest extends BaseEntity {
   @Column({ type: 'simple-json', nullable: true })
   images!: string[] | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   vehicleId!: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
@@ -91,7 +91,7 @@ export class PartRequest extends BaseEntity {
   @Column({ type: 'varchar', length: 64, nullable: true })
   city!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   deliveryAddressId!: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
@@ -113,7 +113,7 @@ export class PartRequest extends BaseEntity {
   @Column({ default: 0 })
   quoteCount!: number;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   convertedOrderId!: string | null;
 
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })

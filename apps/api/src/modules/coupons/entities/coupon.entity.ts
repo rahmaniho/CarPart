@@ -50,6 +50,6 @@ export class Coupon extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 }

@@ -797,7 +797,7 @@ export class OrdersService {
   }
 
   /** اثرات جانبی پس از تغییر وضعیت. */
-  private async afterTransition(order: Order, to: OrderStatus, actor: Actor, user: RequestUser | null): Promise<void> {
+  private async afterTransition(order: Order, to: OrderStatus, actor: Actor, _user: RequestUser | null): Promise<void> {
     switch (to) {
       case 'PAID':
         await this.onPaid(order);

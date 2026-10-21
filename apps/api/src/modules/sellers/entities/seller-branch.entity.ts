@@ -15,7 +15,7 @@ export interface BusinessHour {
 @Index(['sellerId', 'isActive'])
 export class SellerBranch extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
   @ManyToOne(() => Seller, { onDelete: 'CASCADE' })

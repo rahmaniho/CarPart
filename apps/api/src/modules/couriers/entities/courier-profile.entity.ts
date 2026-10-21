@@ -10,7 +10,7 @@ export type CourierVehicleType = 'motorcycle' | 'car' | 'pickup' | 'van';
 @Entity('courier_profiles')
 export class CourierProfile extends BaseEntity {
   @Index({ unique: true })
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @OneToOne(() => User)
@@ -62,7 +62,7 @@ export class CourierProfile extends BaseEntity {
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   verifiedAt!: Date | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   verifiedBy!: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })

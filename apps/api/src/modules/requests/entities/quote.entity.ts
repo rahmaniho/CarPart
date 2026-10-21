@@ -14,7 +14,7 @@ import { QuoteItem } from './quote-item.entity';
 @Index(['sellerId', 'createdAt'])
 export class Quote extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   requestId!: string;
 
   @ManyToOne(() => PartRequest, { onDelete: 'CASCADE' })
@@ -22,10 +22,10 @@ export class Quote extends BaseEntity {
   request!: PartRequest;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   branchId!: string;
 
   @Index()
@@ -80,6 +80,6 @@ export class Quote extends BaseEntity {
   @Column({ type: 'varchar', length: 300, nullable: true })
   decisionNote!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   convertedOrderId!: string | null;
 }

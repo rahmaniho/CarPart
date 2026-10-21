@@ -13,18 +13,18 @@ export class ReturnRequest extends BaseEntity {
   code!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   orderItemId!: string | null;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
   @Column({ default: 1 })
@@ -58,9 +58,9 @@ export class ReturnRequest extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   resolutionNote!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   refundId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   handledBy!: string | null;
 }

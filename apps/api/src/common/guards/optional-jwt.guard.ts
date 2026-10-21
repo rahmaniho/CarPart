@@ -1,6 +1,5 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
 
 /**
  * گارد احراز هویت اختیاری.

@@ -9,7 +9,7 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['userId', 'createdAt'])
 export class Notification extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @Column({ length: 16, default: 'inapp' })

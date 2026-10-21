@@ -19,7 +19,7 @@ import { Seller } from './seller.entity';
 @Index(['branchId', 'isActive'])
 export class SellerProduct extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
   @ManyToOne(() => Seller, { onDelete: 'CASCADE' })
@@ -27,7 +27,7 @@ export class SellerProduct extends BaseEntity {
   seller!: Seller;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   branchId!: string;
 
   @ManyToOne(() => SellerBranch, { onDelete: 'CASCADE' })
@@ -35,7 +35,7 @@ export class SellerProduct extends BaseEntity {
   branch!: SellerBranch;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   partId!: string;
 
   @ManyToOne(() => Part, { onDelete: 'CASCADE' })

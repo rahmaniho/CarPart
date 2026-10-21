@@ -149,7 +149,7 @@ describe('درخواست تأمین و پیشنهاد قیمت (e2e)', () => {
     const quotes = ctx.app.get(QuotesService);
     const sellerIds = await dataSource.query('SELECT id FROM sellers ORDER BY createdAt ASC');
     const submittedIds: string[] = [];
-    for (const [index, row] of (sellerIds as Array<{ id: string }>).slice(0, 2).entries()) {
+    for (const [index] of (sellerIds as Array<{ id: string }>).slice(0, 2).entries()) {
       const session = index === 0 ? seller : seller2;
       const products = await ctx.http.get('/api/v1/sellers/me/products?pageSize=10').set('Authorization', `Bearer ${session.token}`);
       const product = products.body?.items?.[0];

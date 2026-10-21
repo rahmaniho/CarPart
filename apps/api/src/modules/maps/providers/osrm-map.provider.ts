@@ -1,6 +1,6 @@
 import type { LatLng } from '@carpart/contract';
 import type { MapProvider, MapProviderHealth, RouteEstimate } from '../map-provider.interface';
-import { MockMapProvider, type MockMapOptions } from './mock-map.provider';
+import { MockMapProvider } from './mock-map.provider';
 
 /**
  * آداپتر سرویس مسیر سازگار با OSRM (مانند OSRM عمومی یا نمونه خودمیزبان).

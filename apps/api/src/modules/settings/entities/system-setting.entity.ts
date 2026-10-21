@@ -42,6 +42,6 @@ export class SystemSetting extends BaseEntity {
   @Column({ default: false })
   isPublic!: boolean;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   updatedBy!: string | null;
 }

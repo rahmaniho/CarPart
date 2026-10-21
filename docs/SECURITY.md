@@ -15,6 +15,7 @@
 - قیمت/وضعیت/مبلغ **هرگز از کلاینت** پذیرفته نمی‌شود؛ فیلدهای ناشناخته با `forbidNonWhitelisted` رد می‌شوند.
 - تأیید پرداخت فقط از مسیر سمت سرور (`POST /payments/verify` یا Sandbox)؛ امضای HMAC درگاه Sandbox با مقایسه امن (`safeEqual`).
 - Idempotency-Key برای پرداخت/سفارش/تسویه (جلوگیری از تکرار/پخش مجدد).
+- Claim شرطی `VERIFYING` روی رکورد پرداخت، تأییدهای هم‌زمان بین Instanceها را Serialize می‌کند؛ تست رقابت، یک‌باربودن کسر موجودی/کمیسیون را می‌سنجد.
 - رزرو موجودی اتمیک + کاهش هم‌زمانی با شرط موجودی (بدون فروش بیش از موجودی).
 - اطلاعات بانکی فروشندگان رمزنگاری‌شده (`encryptSecret`) و هرگز خام برنمی‌گردد.
 
@@ -26,10 +27,11 @@
 
 ## ورودی و خروجی
 - ValidationPipe سراسری (class-validator) با پیام فارسی ساخت‌یافته per-field.
-- محافظت XSS: React (escaping پیش‌فرض) + `helmet`؛ CSP عمداً در توسعه باز است (باید در استقرار سخت شود — در STATUS ثبت شده).
+- محافظت XSS: React (escaping پیش‌فرض) + `helmet`؛ CSP و Permissions-Policy در Nginx تولید اعمال می‌شوند و Swagger در Production عمومی نیست.
 - آپلود فایل: اعتبارسنجی magic bytes + سقف حجم + نوع مجاز (فقط local storage در MVP).
 - محدودسازی نرخ (Throttler) با حد سخت‌گیرانه‌تر برای مسیرهای auth؛ پاسخ ۴۲۹ ساخت‌یافته.
 
 ## وابستگی‌های خارجی
 - هیچ API key فرضی در کد نیست؛ همه از env خوانده و اعتبارسنجی می‌شوند (zod).
+- Startup تولید، sql.js، `DB_SYNC=true`، داده Demo، رمز کوتاه PostgreSQL، کلید رمزنگاری پیش‌فرض، JWT مشترک و CORS wildcard را رد می‌کند.
 - حالت‌های mock/sandbox صادقانه در پاسخ‌ها علامت می‌خورند (`isSimulated`, `routeSource`, `sandboxActive`).

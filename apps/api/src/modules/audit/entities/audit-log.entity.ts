@@ -11,7 +11,7 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['actorId', 'createdAt'])
 export class AuditLog extends BaseEntity {
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   actorId!: string | null;
 
   @Column({ type: 'varchar', length: 16, nullable: true })

@@ -10,7 +10,7 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['orderId', 'createdAt'])
 export class OrderEvent extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Column({ type: 'varchar', length: 32, nullable: true })
@@ -26,7 +26,7 @@ export class OrderEvent extends BaseEntity {
   @Column({ type: 'text' })
   faDescription!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   actorId!: string | null;
 
   @Column({ type: 'varchar', length: 32, nullable: true })

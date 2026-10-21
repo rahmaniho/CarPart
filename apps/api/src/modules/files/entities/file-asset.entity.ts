@@ -16,7 +16,7 @@ export type FileKind =
 @Index(['ownerId', 'kind'])
 export class FileAsset extends BaseEntity {
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   ownerId!: string | null;
 
   @Column({ length: 32 })

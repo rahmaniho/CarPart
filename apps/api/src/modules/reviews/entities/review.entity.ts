@@ -7,18 +7,18 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['targetType', 'targetId', 'createdAt'])
 export class Review extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   authorId!: string;
 
   @Column({ length: 16 })
   targetType!: 'seller' | 'courier';
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   targetId!: string;
 
   @Column()

@@ -6,10 +6,10 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['ticketId', 'createdAt'])
 export class TicketMessage extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   ticketId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   authorId!: string | null;
 
   @Column({ length: 16, default: 'user' })

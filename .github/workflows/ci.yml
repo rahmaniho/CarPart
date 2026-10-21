@@ -29,6 +29,12 @@ jobs:
       - name: Typecheck (همه workspaceها)
         run: npm run typecheck --workspaces --if-present
 
+      - name: Lint (API + وب + موبایل)
+        run: npm run lint
+
+      - name: سازگاری Entity و Migration با PostgreSQL
+        run: npm run check:postgres-schema
+
       - name: تست‌های API (Jest — واحد + سرتاسری)
         run: npm run test -w @carpart/api
 

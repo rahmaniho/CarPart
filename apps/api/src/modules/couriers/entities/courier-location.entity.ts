@@ -11,10 +11,10 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['deliveryId', 'recordedAt'])
 export class CourierLocation extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   courierId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   deliveryId!: string | null;
 
   @Column({ type: 'float' })

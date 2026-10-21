@@ -1,5 +1,6 @@
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../database/base.entity';
+import { DATE_COLUMN_TYPE } from '../../../database/column-types';
 import { User } from '../../users/entities/user.entity';
 
 /**
@@ -22,7 +23,7 @@ export class DeviceToken extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   isActive!: boolean;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   lastSeenAt: Date | null = null;
 
   @Column({ type: 'uuid' })

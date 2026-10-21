@@ -8,14 +8,14 @@ import { BaseEntity, moneyTransformer } from '../../../database/base.entity';
 @Index(['orderId', 'status'])
 export class Refund extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   paymentId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId!: string | null;
 
   @Column({ type: 'bigint', transformer: moneyTransformer })
@@ -31,10 +31,10 @@ export class Refund extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   note!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   requestedBy!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   approvedBy!: string | null;
 
   @Column({ type: 'varchar', length: 128, nullable: true })

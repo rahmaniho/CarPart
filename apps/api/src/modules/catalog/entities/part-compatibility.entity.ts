@@ -12,16 +12,16 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['modelId', 'level'])
 export class PartCompatibility extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   partId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   makeId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   modelId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   variantId!: string | null;
 
   @Column({ type: 'int', nullable: true })

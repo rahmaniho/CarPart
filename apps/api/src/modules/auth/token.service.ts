@@ -6,7 +6,7 @@ import { CONFIG_TOKEN, type AppConfig } from '../../config/configuration';
 import { AppException, ErrorCodes } from '../../common/errors/app-error';
 import { hashToken } from '../../common/utils/crypto';
 import { randomToken } from '../../common/utils/id';
-import type { AccessTokenPayload, RefreshTokenPayload } from '../../common/types/auth';
+import type { AccessTokenPayload } from '../../common/types/auth';
 import { User } from '../users/entities/user.entity';
 import { UserSession } from '../users/entities/user-session.entity';
 import { UsersRepository } from '../users/users.repository';

@@ -18,7 +18,7 @@ export class Part extends BaseEntity {
   nameEn!: string | null;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   categoryId!: string;
 
   @ManyToOne(() => PartCategory, { onDelete: 'RESTRICT' })
@@ -26,7 +26,7 @@ export class Part extends BaseEntity {
   category!: PartCategory;
 
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   brandId!: string | null;
 
   @ManyToOne(() => PartBrand, { onDelete: 'SET NULL', nullable: true })
@@ -85,6 +85,6 @@ export class Part extends BaseEntity {
   @Column({ default: true })
   isActive!: boolean;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 }

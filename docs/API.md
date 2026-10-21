@@ -43,6 +43,8 @@
 ## پرداخت
 `POST /payments`، `POST /payments/verify` (**تنها مسیر تأیید**)، `POST /payments/sandbox/confirm` (فقط غیرتولید)، `GET /payments/readiness`، `POST /payments/refunds`، `GET /payments/refunds/mine`
 
+در زمان تأیید، پرداخت به‌صورت اتمیک وارد `VERIFYING` می‌شود. درخواست هم‌زمان با کد `PAYMENT_VERIFICATION_IN_PROGRESS` و HTTP 409 قابل‌تلاش‌مجدد رد می‌شود؛ Claim رهاشده پس از مهلت تنظیم `payment.verification_lock_seconds` قابل بازیابی است.
+
 ## فروشنده
 `GET/PUT /sellers/me`، `POST /sellers/me/submit-review`، `GET/POST/PATCH /sellers/me/branches`، `GET/POST/PATCH /sellers/me/products` (+ `/price` `/stock` `/active`)، `GET /sellers/me/dashboard`
 سفارش‌ها: `GET /seller/orders[/:id]`، `POST /seller/orders/:id/transition`

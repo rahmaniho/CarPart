@@ -40,10 +40,12 @@ export default function MissionDetailPage(): JSX.Element {
   }
 
   const mission = detail.data;
-  const shouldShareLocation = Boolean(mission && ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(mission.status));
+  const missionId = mission?.id;
+  const missionStatus = mission?.status;
+  const shouldShareLocation = Boolean(missionId && missionStatus && ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(missionStatus));
 
   useEffect(() => {
-    if (!mission || !shouldShareLocation) {
+    if (!missionId || !shouldShareLocation) {
       setLocationStatus({ active: false, lastAt: null, message: null });
       return;
     }
@@ -64,7 +66,7 @@ export default function MissionDetailPage(): JSX.Element {
             speedKmh: position.speedKmh ?? undefined,
             heading: position.heading ?? undefined,
             capturedAt: position.capturedAt,
-            deliveryId: mission.id,
+            deliveryId: missionId,
           })
           .then((result) => {
             if (cancelled) return;
@@ -92,7 +94,7 @@ export default function MissionDetailPage(): JSX.Element {
       stop?.();
       setLocationStatus({ active: false, lastAt: null, message: null });
     };
-  }, [mission?.id, mission?.status, shouldShareLocation]);
+  }, [missionId, shouldShareLocation]);
 
   return (
     <AppShell title={`مأموریت ${mission?.code ?? ''}`} tabs={COURIER_TABS}>

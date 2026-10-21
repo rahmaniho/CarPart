@@ -12,14 +12,14 @@ export type InventoryReason = 'initial' | 'restock' | 'adjustment' | 'sale' | 'r
 @Index(['sellerProductId', 'createdAt'])
 export class InventoryMovement extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerProductId!: string;
 
   @ManyToOne(() => SellerProduct, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'sellerProductId' })
   sellerProduct!: SellerProduct;
 
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   branchId!: string;
 
   /** مقدار تغییر (مثبت: افزایش، منفی: کاهش) */
@@ -32,13 +32,13 @@ export class InventoryMovement extends BaseEntity {
   @Column({ length: 32 })
   reason!: InventoryReason;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   orderId!: string | null;
 
   @Column({ type: 'text', nullable: true })
   note!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   actorId!: string | null;
 
   @Column({ length: 16, default: 'user' })
