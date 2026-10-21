@@ -145,6 +145,17 @@ body { @apply bg-slate-100 text-ink font-sans antialiased; }
 
 /* Footer */
 .public-footer { border-top:1px solid rgb(255 255 255 / .08); background:#07090d; color:#8d99aa; }.public-footer__top { display:grid; grid-template-columns:1.5fr repeat(3,1fr); width:min(100% - 2rem,88rem); margin:auto; padding:4rem 0; gap:3rem; }.public-footer__top>div { display:flex; flex-direction:column; gap:.7rem; }.public-footer__top>div>p { max-width:23rem; font-size:.65rem; line-height:2; }.public-footer__top b { color:#f5f7fa; font-size:.73rem; }.public-footer__top a:not(.public-brand) { color:#7f8b9c; font-size:.65rem; }.public-footer__top a:hover { color:var(--cyan); }.public-footer__bottom { display:flex; justify-content:space-between; width:min(100% - 2rem,88rem); margin:auto; border-top:1px solid rgb(255 255 255 / .08); padding:1.2rem 0; color:#4f5a69; font-family:monospace; font-size:.5rem; }
+.karensoft-credit { display:inline-flex; align-items:center; gap:.65rem; direction:ltr; border-radius:999px; padding:.3rem .5rem .3rem .7rem; color:rgba(245,247,250,.58); transition:color .25s ease,background-color .25s ease,transform .25s ease; }
+.karensoft-credit:hover { color:rgba(245,247,250,.9); background:rgb(255 255 255 / .035); transform:translateY(-1px); }
+.karensoft-credit__label { position:relative; overflow:hidden; background:linear-gradient(105deg,rgba(245,247,250,.48) 25%,#fff 48%,rgba(73,216,255,.9) 52%,rgba(245,247,250,.48) 75%) 100% 0 / 250% 100%; background-clip:text; -webkit-background-clip:text; color:transparent; font-family:ui-monospace,monospace; font-size:.52rem; letter-spacing:.055em; white-space:nowrap; animation:karensoftTextShine 5.5s ease-in-out infinite; }
+.karensoft-credit__brand { display:inline-flex; align-items:center; gap:.38rem; }
+.karensoft-credit__mark { position:relative; display:grid; width:2.3rem; height:2.3rem; flex:none; place-items:center; }
+.karensoft-credit__mark::before { content:''; position:absolute; inset:-.17rem; border-radius:50%; background:conic-gradient(from 0deg,transparent 0 38%,rgb(73 216 255 / .82) 48%,rgb(49 133 255 / .24) 58%,transparent 68%); animation:karensoftOrbit 4.8s linear infinite; }
+.karensoft-credit__mark::after { content:''; position:absolute; inset:-.06rem; border:1px solid rgb(49 133 255 / .16); border-radius:50%; background:#07090d; }
+.karensoft-credit__mark img { position:relative; z-index:1; width:1.9rem; height:1.9rem; object-fit:contain; animation:karensoftMarkFloat 3.2s ease-in-out infinite; }
+.karensoft-credit__wordmarks { position:relative; display:flex; width:5.8rem; overflow:hidden; flex-direction:column; align-items:center; gap:.08rem; border:1px solid rgb(255 255 255 / .2); border-radius:.35rem; background:rgba(255,255,255,.94); padding:.2rem .32rem; box-shadow:0 4px 18px rgb(0 0 0 / .2); }
+.karensoft-credit__wordmarks::after { content:''; position:absolute; top:-25%; bottom:-25%; left:-45%; width:28%; background:linear-gradient(90deg,transparent,rgb(255 255 255 / .76),transparent); transform:skewX(-18deg); animation:karensoftWordmarkShine 5.5s ease-in-out infinite; }
+.karensoft-credit__wordmarks img:first-child { width:100%; height:auto; }.karensoft-credit__wordmarks img:last-child { width:94%; height:auto; }
 
 /* Reveal and motion */
 .reveal { opacity:0; transform:translateY(2rem); transition:opacity .8s ease,transform .8s ease; }.reveal.is-visible { opacity:1; transform:none; }
@@ -153,6 +164,10 @@ body { @apply bg-slate-100 text-ink font-sans antialiased; }
 @keyframes scrollLine { to{top:100%} }
 @keyframes gearFloat { 50%{transform:translateY(-10px) rotate(4deg)} }
 @keyframes networkPulse { 0%{opacity:.7;transform:scale(.92)} 70%,100%{opacity:0;transform:scale(1.2)} }
+@keyframes karensoftOrbit { to{transform:rotate(1turn)} }
+@keyframes karensoftMarkFloat { 50%{transform:translateY(-1.5px) scale(1.025)} }
+@keyframes karensoftTextShine { 0%,35%{background-position:100% 0} 65%,100%{background-position:-35% 0} }
+@keyframes karensoftWordmarkShine { 0%,42%{left:-45%;opacity:0} 52%{opacity:1} 65%,100%{left:125%;opacity:0} }
 
 @media (max-width:1100px) {
   .public-nav { display:none; }.mobile-menu { display:block; }.public-account { margin-inline-start:auto; }.mobile-menu { margin-inline-start:0; }

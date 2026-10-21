@@ -65,6 +65,13 @@ describe('صفحات عمومی', () => {
     expect(screen.getByText('تحویل به مکانیک یا مشتری')).toBeTruthy();
     expect(screen.getAllByRole('link', { name: /جست‌وجوی قطعات/ }).some((link) => link.getAttribute('href') === '/search')).toBe(true);
     expect(screen.getAllByRole('link', { name: /همکاری با CarPart/ }).some((link) => link.getAttribute('href') === '/register')).toBe(true);
+    const karensoft = screen.getByRole('link', { name: /طراحی و توسعه توسط کارن سافت/ });
+    expect(karensoft.getAttribute('href')).toBe('https://www.karen-soft.ir');
+    expect(karensoft.getAttribute('target')).toBe('_blank');
+    expect(karensoft.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(karensoft.querySelector('img[src="/images/karensoft/mark.png"]')).toBeTruthy();
+    expect(karensoft.querySelector('img[src="/images/karensoft/wordmark-fa.png"]')).toBeTruthy();
+    expect(karensoft.querySelector('img[src="/images/karensoft/wordmark-en.png"]')).toBeTruthy();
   });
 
   it('کارت پیشنهاد قیمت، هشدار و رتبه‌بندی شفاف را نشان می‌دهد', () => {

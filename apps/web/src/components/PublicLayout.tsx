@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, apiTokens, isStaticLanding } from '../lib/api';
 import { useSessionStore, canUsePanel, canUseSeller } from '../lib/session';
 
+const publicAsset = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
+
 /** پوسته عمومی؛ ناوبری واقعی، دسترسی نقش‌محور و نسخه موبایل بدون وابستگی جاوااسکریپت. */
 export function PublicLayout({ children, wide = false }: { children: ReactNode; wide?: boolean }): JSX.Element {
   const navigate = useNavigate();
@@ -53,7 +55,20 @@ export function PublicLayout({ children, wide = false }: { children: ReactNode; 
           <div><b>همکاری</b><Link to="/register">ثبت‌نام فروشنده</Link><Link to="/register">ثبت‌نام پیک</Link><Link to="/#faq">پرسش‌های متداول</Link></div>
           <div><b>شفافیت</b><p>مبالغ به تومان‌اند. زمان ارسال تخمینی است. سازگاری قطعه تنها در سطح تأییدشده نمایش داده می‌شود.</p></div>
         </div>
-        <div className="public-footer__bottom"><span>© کارپارت — همه حقوق محفوظ است.</span><span>PRECISION · TRUST · CONNECTIVITY</span></div>
+        <div className="public-footer__bottom">
+          <span>© کارپارت — همه حقوق محفوظ است.</span>
+          <a className="karensoft-credit" href="https://www.karen-soft.ir" target="_blank" rel="noopener noreferrer" aria-label="طراحی و توسعه توسط کارن سافت؛ باز کردن وب‌سایت در پنجره جدید">
+            <span className="karensoft-credit__label">Designed &amp; Developed by</span>
+            <span className="karensoft-credit__brand" aria-hidden="true">
+              <span className="karensoft-credit__mark"><img src={publicAsset('images/karensoft/mark.png')} width="256" height="256" alt="" /></span>
+              <span className="karensoft-credit__wordmarks">
+                <img src={publicAsset('images/karensoft/wordmark-fa.png')} width="383" height="96" alt="" />
+                <img src={publicAsset('images/karensoft/wordmark-en.png')} width="410" height="48" alt="" />
+              </span>
+            </span>
+          </a>
+          <span>PRECISION · TRUST · CONNECTIVITY</span>
+        </div>
       </footer>
     </div>
   );
