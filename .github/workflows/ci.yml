@@ -53,10 +53,65 @@ jobs:
           npm run build -w @carpart/web
           npm run build -w @carpart/mobile
 
+  postgres-16:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: carpart
+          POSTGRES_PASSWORD: ci-postgres-password
+          POSTGRES_DB: carpart
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carpart -d carpart"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      TEST_DB_TYPE: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: carpart
+      POSTGRES_PASSWORD: ci-postgres-password
+      POSTGRES_DB: carpart
+      POSTGRES_SSL: "false"
+      PGPASSWORD: ci-postgres-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+      - name: تست چرخه سفارش و چندفروشنده‌ای روی PostgreSQL 16
+        run: npm run test -w @carpart/api -- --runInBand test/e2e/order-lifecycle.e2e-spec.ts
+      - name: Backup و Restore واقعی و تطبیق داده
+        run: |
+          if ! command -v pg_dump >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          source_orders=$(psql -h localhost -U carpart -d carpart -Atc 'SELECT COUNT(*) FROM orders')
+          source_migrations=$(psql -h localhost -U carpart -d carpart -Atc 'SELECT COUNT(*) FROM schema_migrations')
+          test "$source_orders" -gt 0
+          test "$source_migrations" -eq 2
+          pg_dump -h localhost -U carpart -d carpart --format=custom --no-owner --no-acl --file=/tmp/carpart.dump
+          createdb -h localhost -U carpart carpart_restore
+          pg_restore -h localhost -U carpart -d carpart_restore --no-owner --no-acl --exit-on-error /tmp/carpart.dump
+          restored_orders=$(psql -h localhost -U carpart -d carpart_restore -Atc 'SELECT COUNT(*) FROM orders')
+          restored_migrations=$(psql -h localhost -U carpart -d carpart_restore -Atc 'SELECT COUNT(*) FROM schema_migrations')
+          test "$restored_orders" = "$source_orders"
+          test "$restored_migrations" = "$source_migrations"
+          psql -h localhost -U carpart -d carpart_restore -v ON_ERROR_STOP=1 -c 'SELECT "orderKind", COUNT(*) FROM orders GROUP BY "orderKind" ORDER BY "orderKind";'
+
   docker:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - name: ساخت تصاویر Docker (بدون push)
