@@ -43,9 +43,12 @@ describe('صفحات عمومی', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByText(/قطعه‌ای که لازم دارید/)).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/دنیای قطعات خودرو.*هوشمندتر از همیشه/s);
     expect(screen.getByLabelText('جست‌وجوی قطعه')).toBeTruthy();
     expect(screen.getAllByText('کارپارت').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'یک سفارش؛ چند مسیر هماهنگ' })).toBeTruthy();
+    expect(screen.getByText('۲ بستهٔ فروشنده')).toBeTruthy();
+    expect(screen.getByText('نمایش مفهومی')).toBeTruthy();
     expect(screen.getByText('برای مکانیک و خریدار')).toBeTruthy();
     expect(screen.getByText('برای فروشنده و تأمین‌کننده')).toBeTruthy();
     expect(screen.getByText('برای پیک')).toBeTruthy();
@@ -60,8 +63,8 @@ describe('صفحات عمومی', () => {
     expect(screen.getByRole('img', { name: /تحویل بسته قطعه به مکانیک/ }).getAttribute('src')).toBe('/landing/courier-delivery.webp');
     expect(screen.getByText('دریافت و بارگیری امن')).toBeTruthy();
     expect(screen.getByText('تحویل به مکانیک یا مشتری')).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'لوگوی برای فروشنده و تأمین‌کننده کارپارت' }).getAttribute('src')).toBe('/branding/seller.webp');
-    expect(screen.getByRole('link', { name: /دریافت نسخه Android/ }).getAttribute('href')).toBe('https://github.com/rahmaniho/CarPart/releases/latest');
+    expect(screen.getAllByRole('link', { name: /جست‌وجوی قطعات/ }).some((link) => link.getAttribute('href') === '/search')).toBe(true);
+    expect(screen.getAllByRole('link', { name: /همکاری با CarPart/ }).some((link) => link.getAttribute('href') === '/register')).toBe(true);
   });
 
   it('کارت پیشنهاد قیمت، هشدار و رتبه‌بندی شفاف را نشان می‌دهد', () => {

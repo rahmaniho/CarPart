@@ -3,71 +3,57 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, apiTokens, isStaticLanding } from '../lib/api';
 import { useSessionStore, canUsePanel, canUseSeller } from '../lib/session';
 
-/** پوسته عمومی واکنش‌گرا با ناوبری معرفی، جست‌وجو و دسترسی حساب. */
+/** پوسته عمومی؛ ناوبری واقعی، دسترسی نقش‌محور و نسخه موبایل بدون وابستگی جاوااسکریپت. */
 export function PublicLayout({ children, wide = false }: { children: ReactNode; wide?: boolean }): JSX.Element {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const user = useSessionStore((s) => s.user);
-  const clear = useSessionStore((s) => s.clear);
+  const user = useSessionStore((state) => state.user);
+  const clear = useSessionStore((state) => state.clear);
   const home = user ? (canUsePanel(user) ? '/admin' : canUseSeller(user) ? '/seller' : '/') : '/';
+  const links = [
+    ['/#catalog', 'جست‌وجوی قطعه'],
+    ['/#network', 'شبکه کارپارت'],
+    ['/#journey', 'نحوه کار'],
+    ['/#roles', 'راهکارها'],
+    ['/#seller', 'همکاری فروش'],
+  ] as const;
 
   return (
-    <div className="flex min-h-full flex-col bg-white">
+    <div className={`public-shell ${wide ? 'public-shell--cinematic' : ''}`}>
       <a className="public-skip" href="#public-main">رفتن به محتوای اصلی</a>
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 lg:flex-nowrap lg:px-6">
-          <Link to={home} className="group flex shrink-0 items-center gap-2.5" aria-label="صفحه اصلی کارپارت">
+      <header className="public-header">
+        <div className="public-header__inner">
+          <Link to={home} className="public-brand" aria-label="صفحه اصلی کارپارت">
             <span className="brand-mark"><i /><i /></span>
-            <span><b className="block text-base font-black leading-5">کارپارت</b><small className="hidden text-[9px] font-bold tracking-wide text-muted sm:block">بازار هوشمند قطعات</small></span>
+            <span><b>کارپارت</b><small>CARPART NETWORK</small></span>
           </Link>
 
-          <nav className="mr-4 hidden items-center gap-5 text-xs font-bold text-slate-600 xl:flex" aria-label="بخش‌های صفحه">
-            <Link to="/#roles" className="hover:text-primary">راهکارها</Link>
-            <Link to="/#benefits" className="hover:text-primary">مزایا برای شما</Link>
-            <Link to="/#features" className="hover:text-primary">امکانات</Link>
-            <Link to="/#how" className="hover:text-primary">نحوه کار</Link>
-            <Link to="/#download" className="hover:text-primary">دانلود اپ</Link>
-          </nav>
+          <nav className="public-nav" aria-label="بخش‌های صفحه">{links.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}</nav>
 
-          {isStaticLanding ? <div className="hidden flex-1 md:block" /> : (
-            <form
-              className="order-last flex w-full flex-1 items-center gap-2 md:order-none md:mr-auto md:max-w-sm"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const q = (event.currentTarget.elements.namedItem('q') as HTMLInputElement).value;
-                navigate(`/search?q=${encodeURIComponent(q)}`);
-              }}
-            >
-              <div className="relative flex-1"><span className="pointer-events-none absolute right-3 top-2.5 text-slate-400" aria-hidden="true">⌕</span><input name="q" className="cp-field !pr-9" aria-label="جست‌وجوی سریع" placeholder="جست‌وجوی قطعه…" defaultValue={params.get('q') ?? ''} /></div>
-              <button type="submit" className="cp-btn-primary shrink-0 !px-3">جست‌وجو</button>
+          {!wide && !isStaticLanding ? (
+            <form className="header-search" onSubmit={(event) => { event.preventDefault(); const q = (event.currentTarget.elements.namedItem('q') as HTMLInputElement).value; navigate(`/search?q=${encodeURIComponent(q)}`); }}>
+              <input name="q" aria-label="جست‌وجوی سریع" placeholder="جست‌وجوی قطعه…" defaultValue={params.get('q') ?? ''} /><button aria-label="اجرای جست‌وجو">⌕</button>
             </form>
-          )}
+          ) : <span className="public-header__spacer" />}
 
-          {user ? (
-            <div className="mr-auto flex items-center gap-2 md:mr-0">
-              <Link to={home} className="cp-btn-ghost max-w-32 truncate text-xs">{user.fullName}</Link>
-              <button type="button" className="cp-btn-ghost text-xs text-red-700" onClick={async () => { await api.auth.logout().catch(() => undefined); apiTokens.setAccess(null); clear(); navigate('/'); }}>خروج</button>
-            </div>
-          ) : isStaticLanding ? (
-            <a className="cp-btn-primary mr-auto shrink-0 text-xs md:mr-0" href="https://github.com/rahmaniho/CarPart/releases/latest" target="_blank" rel="noreferrer">دانلود اپ ↗</a>
-          ) : (
-            <div className="mr-auto flex shrink-0 items-center gap-2 md:mr-0">
-              <Link to="/login" className="cp-btn-ghost text-xs">ورود</Link>
-              <Link to="/register" className="cp-btn-primary text-xs">شروع رایگان</Link>
-            </div>
-          )}
+          <div className="public-account">
+            {user ? <><Link to={home}>{user.fullName}</Link><button type="button" onClick={async () => { await api.auth.logout().catch(() => undefined); apiTokens.setAccess(null); clear(); navigate('/'); }}>خروج</button></> : isStaticLanding ? <a href="https://github.com/rahmaniho/CarPart/releases/latest" target="_blank" rel="noreferrer">دریافت Android ↗</a> : <><Link to="/login" className="public-login">ورود</Link><Link to="/register" className="public-join">پیوستن به شبکه</Link></>}
+          </div>
+
+          <details className="mobile-menu"><summary aria-label="باز کردن منو"><span /><span /></summary><div>{links.map(([to, label]) => <Link key={to} to={to}>{label}</Link>)}<Link to="/login">ورود به حساب</Link><Link to="/register">پیوستن به شبکه</Link></div></details>
         </div>
       </header>
 
-      <main id="public-main" className={`mx-auto w-full flex-1 px-4 py-5 sm:py-7 ${wide ? 'max-w-7xl space-y-20 lg:px-6 lg:py-8' : 'max-w-5xl space-y-6'}`}>{children}</main>
+      <main id="public-main" className={wide ? 'public-main public-main--wide' : 'public-main'}>{children}</main>
 
-      <footer className="mt-14 border-t border-slate-200 bg-slate-950 text-slate-300">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.5fr_1fr_1fr] lg:px-6">
-          <div><div className="flex items-center gap-2"><span className="brand-mark brand-mark--dark"><i /><i /></span><b className="text-lg text-white">کارپارت</b></div><p className="mt-4 max-w-md text-xs leading-7 text-slate-400">بازار هوشمند تأمین و ارسال قطعات یدکی؛ برای مکانیک‌ها، خریداران، فروشندگان و پیک‌ها.</p></div>
-          <div><b className="text-sm text-white">دسترسی سریع</b><div className="mt-3 flex flex-col gap-2 text-xs">{isStaticLanding ? <><Link to="/#roles">معرفی راهکارها</Link><a href="https://github.com/rahmaniho/CarPart/releases/latest" target="_blank" rel="noreferrer">دانلود اپلیکیشن ↗</a></> : <><Link to="/search">جست‌وجوی قطعه</Link><Link to="/register">ثبت‌نام فروشنده</Link><Link to="/#download">دانلود اپلیکیشن</Link></>}</div></div>
-          <div><b className="text-sm text-white">شفافیت</b><p className="mt-3 text-xs leading-7 text-slate-400">مبالغ به تومان است. زمان‌های ارسال تخمینی‌اند و تضمین نمی‌شوند. وضعیت آزمایشی سرویس‌های بیرونی در محصول مشخص می‌شود.</p></div>
+      <footer className="public-footer">
+        <div className="public-footer__top">
+          <div><Link to="/" className="public-brand"><span className="brand-mark"><i /><i /></span><span><b>کارپارت</b><small>CARPART NETWORK</small></span></Link><p>بازار و شبکهٔ عملیاتی قطعات خودرو برای خریدار، مکانیک، فروشنده و پیک.</p></div>
+          <div><b>محصول</b><Link to="/search">جست‌وجوی قطعه</Link><Link to="/#network">سفارش چندفروشنده‌ای</Link><Link to="/account/orders">پیگیری سفارش</Link></div>
+          <div><b>همکاری</b><Link to="/register">ثبت‌نام فروشنده</Link><Link to="/register">ثبت‌نام پیک</Link><Link to="/#faq">پرسش‌های متداول</Link></div>
+          <div><b>شفافیت</b><p>مبالغ به تومان‌اند. زمان ارسال تخمینی است. سازگاری قطعه تنها در سطح تأییدشده نمایش داده می‌شود.</p></div>
         </div>
-        <div className="border-t border-white/10 px-4 py-4 text-center text-[11px] text-slate-500">© کارپارت — همه حقوق محفوظ است.</div>
+        <div className="public-footer__bottom"><span>© کارپارت — همه حقوق محفوظ است.</span><span>PRECISION · TRUST · CONNECTIVITY</span></div>
       </footer>
     </div>
   );
