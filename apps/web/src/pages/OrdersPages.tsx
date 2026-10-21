@@ -84,6 +84,26 @@ export default function OrdersAdminPage(): JSX.Element {
                   <b className="mr-1 tabular-nums">{formatToman(detail.data.payableTotal)}</b>
                 </div>
               </div>
+              {detail.data.packages?.length ? (
+                <div>
+                  <h3 className="mb-1 text-xs font-bold text-muted">بسته‌های فروشندگان ({toFaDigits(detail.data.packages.length)})</h3>
+                  <ul className="space-y-2 text-xs">
+                    {detail.data.packages.map((pkg) => (
+                      <li key={pkg.id} className="rounded-xl border border-line p-2">
+                        <div className="mb-1 flex items-center justify-between">
+                          <b dir="ltr">{pkg.code}</b>
+                          <StatusChip status={pkg.status} />
+                        </div>
+                        <div className="flex justify-between text-muted">
+                          <span>{toFaDigits(pkg.items.length)} قلم · ارسال {formatToman(pkg.deliveryFee)}</span>
+                          <b className="text-ink">{formatToman(pkg.payableTotal)}</b>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {detail.data.items.length ? (
               <div>
                 <h3 className="mb-1 text-xs font-bold text-muted">اقلام ({toFaDigits(detail.data.items.length)})</h3>
                 <ul className="space-y-1 text-xs">
@@ -97,6 +117,7 @@ export default function OrdersAdminPage(): JSX.Element {
                   ))}
                 </ul>
               </div>
+              ) : null}
               <div>
                 <h3 className="mb-1 text-xs font-bold text-muted">تاریخچه</h3>
                 <OrderEvents orderId={detail.data.id} />

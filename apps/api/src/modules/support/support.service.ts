@@ -247,6 +247,9 @@ export class SupportService {
       );
     }
 
+    if (!order.sellerId) {
+      throw new AppException('مرجوعی قلم باید روی بستهٔ فروشنده ثبت شود.', ErrorCodes.VALIDATION_FAILED, { statusCode: 409 });
+    }
     const refundAmount = Math.round((item.lineTotal / item.quantity) * dto.quantity);
     const entity = await this.returns.save(
       this.returns.create({

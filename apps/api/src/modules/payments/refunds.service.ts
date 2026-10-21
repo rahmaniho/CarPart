@@ -34,6 +34,9 @@ export class RefundsService {
   async request(user: RequestUser, orderId: string, reason: string): Promise<Refund> {
     const order = await this.orders.loadOrder(orderId);
     this.orders.assertReadAccess(order, user.id, user);
+    if (order.orderKind === 'child') {
+      throw new AppException('بازپرداخت بسته باید از سفارش تجمیعی آن درخواست شود.', ErrorCodes.VALIDATION_FAILED, { statusCode: 409 });
+    }
     const payment = await this.payments.findOne({ where: { orderId, status: 'SUCCESS' }, order: { paidAt: 'DESC' } });
     if (!payment) {
       throw new AppException('پرداخت موفقی برای این سفارش یافت نشد.', ErrorCodes.PAYMENT_ALREADY_PROCESSED, { statusCode: 409 });
@@ -122,6 +125,13 @@ export class RefundsService {
         const payment = await this.payments.findOne({ where: { id: refund.paymentId } });
         if (!payment) throw new NotFoundException('تراکنش پرداخت');
         const refundAmount = amount ?? refund.amount;
+        if (refundAmount !== refund.amount) {
+          throw new AppException(
+            'بازپرداخت جزئی تا زمان ثبت تخصیص قلم/فروشنده و برگشت متناسب کمیسیون قابل اجرا نیست.',
+            ErrorCodes.VALIDATION_FAILED,
+            { statusCode: 409 },
+          );
+        }
         if (refundAmount > payment.amount - payment.refundedAmount) {
           throw new AppException(
             'مبلغ بازپرداخت از باقیمانده تراکنش بیشتر است.',

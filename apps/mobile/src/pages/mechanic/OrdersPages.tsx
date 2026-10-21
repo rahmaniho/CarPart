@@ -182,6 +182,34 @@ export function OrderDetailPage(): JSX.Element {
             ) : null}
           </div>
 
+          {order.packages?.length ? (
+            <Section title="بسته‌های فروشندگان">
+              <div className="space-y-3">
+                {order.packages.map((pkg) => (
+                  <article key={pkg.id} className="cp-card space-y-2" aria-label={`بسته ${pkg.code}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <b dir="ltr">{pkg.code}</b>
+                      <StatusChip status={pkg.status} />
+                    </div>
+                    <div className="divide-y divide-line">
+                      {pkg.items.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between py-2 text-sm">
+                          <span>{item.partNameFa ?? 'قطعه'} × {item.quantity}</span>
+                          <b>{formatToman(item.lineTotal)}</b>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between border-t border-line pt-2 text-sm">
+                      <span className="text-muted">ارسال {formatToman(pkg.deliveryFee)}</span>
+                      <b>{formatToman(pkg.payableTotal)}</b>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {order.items.length ? (
           <Section title="اقلام">
             <div className="cp-card divide-y divide-line">
               {(order.items ?? []).map((item) => (
@@ -197,6 +225,7 @@ export function OrderDetailPage(): JSX.Element {
               ))}
             </div>
           </Section>
+          ) : null}
 
           <Section title="خلاصه مالی">
             <div className="cp-card space-y-1.5 text-sm">

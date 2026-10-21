@@ -111,6 +111,11 @@ export class DeliveryService {
     if (!order) throw new NotFoundException('سفارش');
     const existing = await this.deliveries.findOne({ where: { orderId, status: Not(In(['CANCELLED', 'FAILED'])) } });
     if (existing) return existing;
+    if (!order.branchId || !order.sellerId || order.orderKind === 'parent') {
+      throw new AppException('مأموریت ارسال باید برای بستهٔ فروشنده ساخته شود، نه سفارش تجمیعی.', ErrorCodes.VALIDATION_FAILED, {
+        statusCode: 409,
+      });
+    }
 
     const branch = await this.branches.findOne({ where: { id: order.branchId } });
     if (!branch) throw new NotFoundException('شعبه فروشنده');

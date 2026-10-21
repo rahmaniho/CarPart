@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, LessThan, Repository } from 'typeorm';
+import { Between, DataSource, In, LessThan, Repository } from 'typeorm';
 import { ORDER_STATUSES, formatJalali, type Actor, type OrderStatus, type PaymentStatus } from '@carpart/contract';
 import type { RequestDeliverySnapshot, RequestVehicleSnapshot } from '../requests/entities/part-request.entity';
 import { AppException, ErrorCodes, NotFoundException } from '../../common/errors/app-error';
+import { runInTransaction } from '../../database/tx';
 import { buildPage, toSkipTake, type PageResult } from '../../common/dto/pagination.dto';
 import { shortCode } from '../../common/utils/id';
 import type { RequestUser } from '../../common/types/auth';
@@ -17,6 +18,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { Payment } from '../payments/entities/payment.entity';
 import { PartRequest } from '../requests/entities/part-request.entity';
 import { Quote } from '../requests/entities/quote.entity';
+import { InventoryMovement } from '../sellers/entities/inventory-movement.entity';
 import { SellerBranch } from '../sellers/entities/seller-branch.entity';
 import { SellerProduct } from '../sellers/entities/seller-product.entity';
 import { Seller } from '../sellers/entities/seller.entity';
@@ -40,6 +42,8 @@ export interface ListOrderFilter {
 
 export interface OrderWithDetails extends Order {
   items: OrderItem[];
+  /** Seller-scoped fulfillment packages; present only on a payment aggregate. */
+  packages?: OrderWithDetails[];
   events?: OrderEvent[];
   delivery?: Delivery | null;
   allowedActions?: Array<{ to: OrderStatus; fa: string; requiresReason: boolean }>;
@@ -86,6 +90,7 @@ export class OrdersService {
     @InjectRepository(Commission) private readonly commissions: Repository<Commission>,
     @InjectRepository(Payment) private readonly payments: Repository<Payment>,
     @InjectRepository(Delivery) private readonly deliveries: Repository<Delivery>,
+    private readonly dataSource: DataSource,
     private readonly stateMachine: OrderStateMachine,
     private readonly pricing: PricingService,
     private readonly coupons: CouponsService,
@@ -114,10 +119,6 @@ export class OrdersService {
       : ((await this.workshops.listAddresses(userId)).find((a) => a.isDefault) ?? (await this.workshops.listAddresses(userId))[0] ?? null);
 
     const lines = await this.buildLinesFromProducts(dto.items);
-    const seller = await this.requireSingleSeller(lines);
-    const branch = await this.branches.findOne({ where: { id: lines[0].snapshot.branchId as string } });
-    if (!branch) throw new NotFoundException('شعبه فروشنده');
-
     const deliverySnapshot = this.buildDeliverySnapshot(workshop, address);
     if (!deliverySnapshot || (deliverySnapshot.lat === null && !deliverySnapshot.addressText)) {
       throw new AppException(
@@ -127,6 +128,24 @@ export class OrdersService {
       );
     }
     const vehicleSnapshot = dto.vehicleId ? await this.vehicleSnapshot(userId, dto.vehicleId) : null;
+    const packageKeys = new Set(lines.map((line) => `${String(line.snapshot.sellerId)}:${String(line.snapshot.branchId)}`));
+    if (packageKeys.size > 1) {
+      return this.createMultiSellerDirect({
+        userId,
+        dto,
+        lines,
+        deliverySnapshot,
+        vehicleSnapshot,
+        addressId: address?.id ?? null,
+        city: deliverySnapshot.city ?? workshop.city,
+        workshopId: workshop.id,
+        idempotencyKey: idempotencyKey ?? null,
+      });
+    }
+
+    const seller = await this.requireSingleSeller(lines);
+    const branch = await this.branches.findOne({ where: { id: lines[0].snapshot.branchId as string } });
+    if (!branch) throw new NotFoundException('شعبه فروشنده');
 
     const order = await this.persistOrder({
       userId,
@@ -300,6 +319,224 @@ export class OrdersService {
     }
 
     return this.detailForUser(userId, order.id);
+  }
+
+  private async createMultiSellerDirect(input: {
+    userId: string;
+    dto: CreateOrderDto;
+    lines: PricedLine[];
+    deliverySnapshot: RequestDeliverySnapshot;
+    vehicleSnapshot: RequestVehicleSnapshot | null;
+    addressId: string | null;
+    city: string | null;
+    workshopId: string;
+    idempotencyKey: string | null;
+  }): Promise<OrderWithDetails> {
+    if (input.dto.saveAsDraft) {
+      throw new AppException('پیش‌نویس چندفروشنده‌ای هنوز پشتیبانی نمی‌شود؛ سفارش را مستقیماً نهایی کنید.', ErrorCodes.ORDER_NOT_EDITABLE, {
+        statusCode: 409,
+      });
+    }
+    if (input.dto.couponCode) {
+      throw new AppException(
+        'تا زمان تعریف سیاست تخصیص تخفیف میان فروشندگان، کوپن برای سبد چندفروشنده‌ای قابل استفاده نیست.',
+        ErrorCodes.VALIDATION_FAILED,
+        { statusCode: 409 },
+      );
+    }
+
+    const grouped = new Map<string, PricedLine[]>();
+    for (const line of input.lines) {
+      const key = `${String(line.snapshot.sellerId)}:${String(line.snapshot.branchId)}`;
+      grouped.set(key, [...(grouped.get(key) ?? []), line]);
+    }
+
+    const packages: Array<{ seller: Seller; branch: SellerBranch; lines: PricedLine[]; order: Order }> = [];
+    for (const lines of grouped.values()) {
+      const seller = await this.requireSingleSeller(lines);
+      const branchId = lines[0].snapshot.branchId as string;
+      const branch = await this.branches.findOne({ where: { id: branchId, sellerId: seller.id, isActive: true } });
+      if (!branch) throw new NotFoundException('شعبه فعال فروشنده');
+      const order = this.orders.create({
+        code: shortCode(8, 'ORD'),
+        orderKind: 'child',
+        userId: input.userId,
+        workshopId: input.workshopId,
+        sellerId: seller.id,
+        branchId: branch.id,
+        status: 'WAITING_FOR_PAYMENT',
+        requestId: null,
+        quoteId: null,
+        parentOrderId: null,
+        source: 'direct',
+        city: input.city,
+        currency: 'IRT',
+        deliveryAddressId: input.addressId,
+        addressSnapshot: input.deliverySnapshot,
+        vehicleSnapshot: input.vehicleSnapshot,
+        urgency: input.dto.urgency ?? 'normal',
+        notes: input.dto.notes ?? null,
+        couponCode: null,
+        couponId: null,
+        idempotencyKey: null,
+        createdBy: input.userId,
+        paymentStatus: null,
+      });
+      await this.reprice(order, lines, seller, branch);
+      packages.push({ seller, branch, lines, order });
+    }
+
+    const parent = this.orders.create({
+      code: shortCode(8, 'ORD'),
+      orderKind: 'parent',
+      userId: input.userId,
+      workshopId: input.workshopId,
+      sellerId: null,
+      branchId: null,
+      status: 'WAITING_FOR_PAYMENT',
+      requestId: null,
+      quoteId: null,
+      parentOrderId: null,
+      source: 'direct',
+      city: input.city,
+      currency: 'IRT',
+      deliveryAddressId: input.addressId,
+      addressSnapshot: input.deliverySnapshot,
+      vehicleSnapshot: input.vehicleSnapshot,
+      urgency: input.dto.urgency ?? 'normal',
+      notes: input.dto.notes ?? null,
+      couponCode: null,
+      couponId: null,
+      idempotencyKey: input.idempotencyKey,
+      createdBy: input.userId,
+      paymentStatus: null,
+      itemsSubtotal: packages.reduce((sum, item) => sum + item.order.itemsSubtotal, 0),
+      deliveryFee: packages.reduce((sum, item) => sum + item.order.deliveryFee, 0),
+      discountTotal: 0,
+      platformFee: packages.reduce((sum, item) => sum + item.order.platformFee, 0),
+      payableTotal: packages.reduce((sum, item) => sum + item.order.payableTotal, 0),
+      expectedReadyAt: new Date(Math.max(...packages.map((item) => item.order.expectedReadyAt?.getTime() ?? 0))),
+      expectedDeliveryAt: null,
+    });
+
+    let savedParent: Order;
+    try {
+      savedParent = await runInTransaction(this.dataSource, async (manager) => {
+        if (input.idempotencyKey) {
+          const existing = await manager.getRepository(Order).findOne({ where: { idempotencyKey: input.idempotencyKey } });
+          if (existing) return existing;
+        }
+        const orderRepo = manager.getRepository(Order);
+        const itemRepo = manager.getRepository(OrderItem);
+        const eventRepo = manager.getRepository(OrderEvent);
+        const movementRepo = manager.getRepository(InventoryMovement);
+        const storedParent = await orderRepo.save(parent);
+
+        for (const pkg of packages) {
+          pkg.order.parentOrderId = storedParent.id;
+          const storedChild = await orderRepo.save(pkg.order);
+          pkg.order = storedChild;
+          await itemRepo.save(pkg.lines.map((line) => itemRepo.create({ orderId: storedChild.id, ...line })));
+
+          for (const line of pkg.lines) {
+            if (!line.sellerProductId) continue;
+            const result = await manager
+              .createQueryBuilder()
+              .update(SellerProduct)
+              .set({ reservedStock: () => '"reservedStock" + :qty', version: () => '"version" + 1' })
+              .where('id = :id AND "isActive" = true AND "price" = :price AND "stock" - "reservedStock" >= :qty', {
+                id: line.sellerProductId,
+                price: line.unitPrice,
+                qty: line.quantity,
+              })
+              .execute();
+            if (!result.affected) {
+              throw new AppException('قیمت یا موجودی یکی از اقلام تغییر کرده است؛ سبد را تازه‌سازی کنید.', ErrorCodes.STOCK_CONFLICT, {
+                statusCode: 409,
+                details: { sellerProductId: line.sellerProductId },
+              });
+            }
+            const product = await manager.getRepository(SellerProduct).findOneByOrFail({ id: line.sellerProductId });
+            await movementRepo.save(
+              movementRepo.create({
+                sellerProductId: product.id,
+                branchId: product.branchId,
+                delta: 0,
+                stockAfter: product.stock,
+                reason: 'reservation',
+                orderId: storedChild.id,
+                note: `رزرو برای بسته ${storedChild.code} از سفارش ${storedParent.code}`,
+                actorId: input.userId,
+                actorType: 'user',
+              }),
+            );
+          }
+          await eventRepo.save(
+            eventRepo.create({
+              orderId: storedChild.id,
+              fromStatus: null,
+              toStatus: 'WAITING_FOR_PAYMENT',
+              action: 'created',
+              faDescription: 'ثبت بستهٔ فروشنده در سفارش تجمیعی',
+              actorId: input.userId,
+              actorRole: 'mechanic',
+              actorType: 'user',
+              reason: null,
+              metadata: { parentOrderId: storedParent.id },
+            }),
+          );
+        }
+        await eventRepo.save(
+          eventRepo.create({
+            orderId: storedParent.id,
+            fromStatus: null,
+            toStatus: 'WAITING_FOR_PAYMENT',
+            action: 'created',
+            faDescription: 'ثبت سفارش تجمیعی چندفروشنده‌ای',
+            actorId: input.userId,
+            actorRole: 'mechanic',
+            actorType: 'user',
+            reason: null,
+            metadata: { childOrderIds: packages.map((pkg) => pkg.order.id) },
+          }),
+        );
+        return storedParent;
+      });
+    } catch (error) {
+      if (input.idempotencyKey) {
+        const existing = await this.orders.findOne({ where: { idempotencyKey: input.idempotencyKey } });
+        if (existing) return this.detailForUser(input.userId, existing.id);
+      }
+      throw error;
+    }
+
+    await this.schedulePaymentExpiry(savedParent);
+    for (const pkg of packages) {
+      await this.notifications
+        .notify({
+          userId: pkg.seller.userId,
+          eventKey: 'order.created',
+          subjectId: pkg.order.id,
+          vars: { code: pkg.order.code, orderId: pkg.order.id, total: pkg.order.payableTotal },
+          moneyVars: ['total'],
+          data: { orderId: pkg.order.id, parentOrderId: savedParent.id },
+          dedupeKey: `order.created.seller:${pkg.order.id}`,
+        })
+        .catch((error) => this.logger.warn(`اعلان بسته ${pkg.order.code} ناموفق بود: ${(error as Error).message}`));
+    }
+    await this.notifications
+      .notify({
+        userId: input.userId,
+        eventKey: 'order.created',
+        subjectId: savedParent.id,
+        vars: { code: savedParent.code, orderId: savedParent.id, total: savedParent.payableTotal },
+        moneyVars: ['total'],
+        data: { orderId: savedParent.id },
+        dedupeKey: `order.created.owner:${savedParent.id}`,
+      })
+      .catch((error) => this.logger.warn(`اعلان سفارش تجمیعی ناموفق بود: ${(error as Error).message}`));
+
+    return this.detailForUser(input.userId, savedParent.id);
   }
 
   /* ------------------------------------------------------------------ */
@@ -568,7 +805,7 @@ export class OrdersService {
       await this.coupons.redeem(order.couponId, order.userId, order.id, order.discountTotal);
     }
     await this.schedulePaymentExpiry(order);
-    const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
+    const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
     if (seller) {
       await this.notifications.notify({
         userId: seller.userId,
@@ -645,10 +882,16 @@ export class OrdersService {
   private async decorate(order: Order, actor: Actor): Promise<OrderWithDetails> {
     const items = await this.items.find({ where: { orderId: order.id } });
     const delivery = await this.deliveries.findOne({ where: { orderId: order.id } });
-    const fee = await this.pricing.estimateDeliveryFee({ distanceKm: delivery?.distanceKm ?? null, urgency: order.urgency, itemsTotal: order.itemsSubtotal });
+    const fee = order.orderKind === 'parent'
+      ? null
+      : await this.pricing.estimateDeliveryFee({ distanceKm: delivery?.distanceKm ?? null, urgency: order.urgency, itemsTotal: order.itemsSubtotal });
+    const children = order.orderKind === 'parent'
+      ? await this.orders.find({ where: { parentOrderId: order.id }, order: { createdAt: 'ASC' } })
+      : [];
     return {
       ...order,
       items,
+      packages: children.length ? await Promise.all(children.map((child) => this.decorate(child, actor))) : undefined,
       delivery: delivery ?? null,
       allowedActions: this.stateMachine.allowedActions(order.status, actor),
       breakdown: [
@@ -656,7 +899,7 @@ export class OrdersService {
         { fa: 'هزینه ارسال', amount: order.deliveryFee },
         ...(order.discountTotal > 0 ? [{ fa: 'تخفیف', amount: -order.discountTotal }] : []),
         { fa: 'مبلغ قابل پرداخت', amount: order.payableTotal },
-        { fa: `منبع محاسبه ارسال: ${fee.distanceKm === null ? 'تخمین بدون مسافت' : 'مسافت مسیر'}`, amount: 0 },
+        ...(fee ? [{ fa: `منبع محاسبه ارسال: ${fee.distanceKm === null ? 'تخمین بدون مسافت' : 'مسافت مسیر'}`, amount: 0 }] : []),
       ],
     };
   }
@@ -688,7 +931,11 @@ export class OrdersService {
   }): Promise<PageResult<Order>> {
     const { skip, take } = toSkipTake(filter.page, filter.pageSize);
     const qb = this.orders.createQueryBuilder('order');
-    if (filter.userId) qb.andWhere('order.userId = :userId', { userId: filter.userId });
+    if (filter.userId) {
+      qb.andWhere('order.userId = :userId', { userId: filter.userId });
+      // خریدار یک سفارش تجمیعی می‌بیند؛ بسته‌ها داخل جزئیات آن بازگردانده می‌شوند.
+      qb.andWhere('order.parentOrderId IS NULL');
+    }
     if (filter.sellerId) qb.andWhere('order.sellerId = :sellerId', { sellerId: filter.sellerId });
     if (filter.status && filter.status !== 'all') {
       if (filter.status === 'active') {
@@ -721,6 +968,13 @@ export class OrdersService {
   async transition(orderId: string, to: OrderStatus, user: RequestUser, reason?: string): Promise<OrderWithDetails> {
     const order = await this.loadOrder(orderId);
     const actor = await this.actorFor(order, user);
+    if (order.orderKind === 'child' && ['CANCELLED', 'REFUND_REQUESTED', 'REFUNDED'].includes(to)) {
+      throw new AppException(
+        'لغو یا بازپرداخت مستقیم بسته تا زمان ثبت تخصیص مالی پشتیبانی نمی‌شود؛ عملیات را روی سفارش تجمیعی انجام دهید.',
+        ErrorCodes.ORDER_NOT_EDITABLE,
+        { statusCode: 409, details: { parentOrderId: order.parentOrderId } },
+      );
+    }
     const transition = this.stateMachine.assertAllowed(order.status, to, actor);
     if (transition.requiresReason && !reason?.trim()) {
       throw new AppException('برای این تغییر وضعیت، ثبت دلیل الزامی است.', ErrorCodes.VALIDATION_FAILED);
@@ -824,6 +1078,9 @@ export class OrdersService {
       case 'CANCELLED':
         await this.onCancelled(order, order.cancelReason ?? 'لغو سفارش', actor);
         break;
+      case 'REFUNDED':
+        await this.onRefunded(order);
+        break;
       case 'WAITING_FOR_COURIER':
         await this.jobs.enqueue('delivery.assign', { orderId: order.id }, { dedupeKey: `delivery-assign:${order.id}`, maxAttempts: 6 });
         break;
@@ -835,7 +1092,12 @@ export class OrdersService {
   /** ثبت پرداخت موفق: قطعی‌کردن موجودی، ثبت کارمزد و ایجاد مأموریت ارسال. */
   async markPaid(orderId: string, payment: Payment): Promise<Order> {
     const order = await this.loadOrder(orderId);
-    if (order.paymentStatus === 'SUCCESS') return order;
+    if (order.paymentStatus === 'SUCCESS') {
+      // A prior callback may have persisted the aggregate payment before all child
+      // effects completed. Reconciliation is idempotent and finishes the fan-out.
+      if (order.orderKind === 'parent') await this.onPaid(order);
+      return this.loadOrder(orderId);
+    }
     order.paymentId = payment.id;
     order.paymentStatus = payment.status as PaymentStatus;
     order.paidAt = payment.paidAt ?? new Date();
@@ -849,13 +1111,36 @@ export class OrdersService {
   }
 
   private async onPaid(order: Order): Promise<void> {
+    if (order.orderKind === 'parent') {
+      const children = await this.orders.find({ where: { parentOrderId: order.id }, order: { createdAt: 'ASC' } });
+      if (!children.length) {
+        throw new AppException('سفارش تجمیعی هیچ بستهٔ فروشنده‌ای ندارد.', ErrorCodes.CONFLICT, { statusCode: 409 });
+      }
+      for (const child of children) {
+        child.paymentId = order.paymentId;
+        child.paymentStatus = order.paymentStatus;
+        child.paidAt = order.paidAt;
+        await this.orders.save(child);
+        if (child.status === 'PAYMENT_FAILED') {
+          await this.systemTransition(child.id, 'WAITING_FOR_PAYMENT', 'همگام‌سازی پرداخت سفارش تجمیعی');
+        }
+        if (child.status === 'WAITING_FOR_PAYMENT' || child.status === 'PAYMENT_FAILED') {
+          await this.systemTransition(child.id, 'PAID', 'پرداخت موفق سفارش تجمیعی', { parentOrderId: order.id });
+        }
+      }
+      await this.notifyOwner(order, 'order.paid', { code: order.code, orderId: order.id, mode: order.paymentStatus ?? 'online' });
+      return;
+    }
+    if (!order.sellerId || !order.branchId) {
+      throw new AppException('مرز فروشنده و شعبه برای بستهٔ سفارش نامعتبر است.', ErrorCodes.CONFLICT, { statusCode: 409 });
+    }
     const items = await this.items.find({ where: { orderId: order.id } });
     await this.sellerProducts.commit(
       items.filter((item) => item.sellerProductId).map((item) => ({ sellerProductId: item.sellerProductId as string, quantity: item.quantity })),
       order.id,
     );
 
-    const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
+    const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
     const commission = await this.pricing.calculateCommission({
       itemsTotal: order.itemsSubtotal,
       discountTotal: order.discountTotal,
@@ -924,7 +1209,7 @@ export class OrdersService {
 
   private async onCompleted(order: Order): Promise<void> {
     await this.notifyOwner(order, 'order.completed', { code: order.code, orderId: order.id });
-    const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
+    const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
     if (seller) {
       seller.completedOrders += 1;
       await this.sellers.save(seller);
@@ -932,6 +1217,20 @@ export class OrdersService {
   }
 
   private async onCancelled(order: Order, reason: string, actor: Actor): Promise<void> {
+    if (order.orderKind === 'parent') {
+      const children = await this.orders.find({ where: { parentOrderId: order.id } });
+      for (const child of children) {
+        if (['CANCELLED', 'REFUNDED', 'COMPLETED'].includes(child.status)) continue;
+        this.stateMachine.assertAllowed(child.status, 'CANCELLED', 'system');
+        await this.applyTransition(child, 'CANCELLED', 'system', null, 'لغو بسته به‌دلیل لغو سفارش تجمیعی', reason, {
+          parentOrderId: order.id,
+        });
+        await this.onCancelled(child, reason, 'system');
+      }
+      await this.jobs.enqueue('delivery.cancel_for_order', { orderId: order.id, reason }, { dedupeKey: `delivery-cancel:${order.id}`, maxAttempts: 3 });
+      await this.notifyOwner(order, 'order.cancelled', { code: order.code, orderId: order.id, reason });
+      return;
+    }
     const items = await this.items.find({ where: { orderId: order.id } });
     if (!order.paidAt) {
       await this.sellerProducts.release(
@@ -949,11 +1248,34 @@ export class OrdersService {
     }
     await this.jobs.enqueue('delivery.cancel_for_order', { orderId: order.id, reason }, { dedupeKey: `delivery-cancel:${order.id}`, maxAttempts: 3 });
     await this.notifyOwner(order, 'order.cancelled', { code: order.code, orderId: order.id, reason });
-    const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
+    const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
     if (seller && actor === 'seller') {
       // فقط لغو از سوی فروشنده در شاخص اعتبار او ثبت می‌شود
       seller.cancelledOrders += 1;
       await this.sellers.save(seller);
+    }
+  }
+
+  private async onRefunded(order: Order): Promise<void> {
+    const affected = order.orderKind === 'parent'
+      ? await this.orders.find({ where: { parentOrderId: order.id } })
+      : [order];
+    for (const child of affected) {
+      const commission = await this.commissions.findOne({ where: { orderId: child.id, status: 'recorded' } });
+      if (commission) {
+        commission.status = 'reversed';
+        commission.reversedAt = new Date();
+        commission.reversalReason = `بازپرداخت کامل سفارش ${order.code}`;
+        await this.commissions.save(commission);
+      }
+      if (child.id !== order.id && child.status !== 'REFUNDED') {
+        const from = child.status;
+        child.status = 'REFUNDED';
+        await this.orders.save(child);
+        await this.recordEvent(child, from, 'REFUNDED', 'بازپرداخت کامل سفارش تجمیعی', null, 'system', null, {
+          parentOrderId: order.id,
+        });
+      }
     }
   }
 
@@ -1028,7 +1350,7 @@ export class OrdersService {
     const to = new Date(now.getTime() - minutes * 60_000);
     const orders = await this.orders.find({ where: { status: In(['PAID', 'SELLER_CONFIRMED']), paidAt: Between(from, to) }, take: 100 });
     for (const order of orders) {
-      const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
+      const seller = order.sellerId ? await this.sellers.findOne({ where: { id: order.sellerId } }) : null;
       if (!seller) continue;
       await this.notifications
         .notify({
@@ -1053,6 +1375,8 @@ export class OrdersService {
       .addSelect('COALESCE(SUM(order.payableTotal), 0)', 'gmv')
       .addSelect('COALESCE(SUM(order.platformFee), 0)', 'platformFee')
       .where('order.createdAt >= :since', { since })
+      // Child packages are already represented in their aggregate total.
+      .andWhere('order.parentOrderId IS NULL')
       .groupBy('order.status')
       .getRawMany<{ status: string; count: string; gmv: string; platformFee: string }>();
 

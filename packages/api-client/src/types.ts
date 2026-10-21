@@ -131,6 +131,10 @@ export interface OrderRow {
   id: string;
   code: string;
   status: OrderStatus;
+  orderKind: 'single' | 'parent' | 'child';
+  parentOrderId: string | null;
+  sellerId: string | null;
+  branchId: string | null;
   source: string;
   city: string | null;
   itemsSubtotal: number;
@@ -161,6 +165,8 @@ export interface OrderAction {
 
 export interface OrderDetail extends OrderRow {
   items: OrderItemRow[];
+  /** Independent seller packages when this row is a payment aggregate. */
+  packages?: OrderDetail[];
   delivery: DeliveryMission | null;
   allowedActions: OrderAction[];
   breakdown: Array<{ fa: string; amount: number }>;

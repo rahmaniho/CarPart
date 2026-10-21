@@ -41,7 +41,7 @@ export class OrderJobHandlers implements OnModuleInit {
         const orderId = String(payload.orderId ?? '');
         if (!orderId) return;
         const order = await this.orders.loadOrder(orderId);
-        if (!['PAID', 'SELLER_CONFIRMED'].includes(order.status)) return;
+        if (!['PAID', 'SELLER_CONFIRMED'].includes(order.status) || !order.sellerId) return;
         const seller = await this.sellers.findOne({ where: { id: order.sellerId } });
         if (!seller) return;
         this.logger.warn(`سفارش ${order.code} بیش از مهلت مقرر در وضعیت ${order.status} مانده است.`);

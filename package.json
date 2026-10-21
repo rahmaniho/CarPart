@@ -14,7 +14,7 @@
     "dev:api": "npm run dev -w @carpart/api",
     "dev:web": "npm run dev -w @carpart/web",
     "build": "npm run build -w @carpart/contract && npm run build -w @carpart/api && npm run build -w @carpart/web",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build:contract && npm run build -w @carpart/api-client && npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test -w @carpart/api",
     "test:watch": "npm run test:watch -w @carpart/api",
@@ -22,7 +22,7 @@
     "db:migrate:revert": "npm run db:migrate:revert -w @carpart/api",
     "db:seed": "npm run db:seed -w @carpart/api",
     "db:reset": "npm run db:reset -w @carpart/api",
-    "check:contract": "node scripts/check-contract.mjs",
+    "check:contract": "npm run build:contract && node scripts/check-contract.mjs",
     "check:postgres-schema": "npm run build -w @carpart/api && DB_TYPE=postgres node scripts/validate-postgres-schema.mjs"
   },
   "devDependencies": {

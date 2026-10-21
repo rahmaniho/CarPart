@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -43,6 +43,7 @@ export class OrderStateMachine {
     @InjectRepository(Refund) private readonly refunds: Repository<Refund>,
     @InjectRepository(Delivery) private readonly deliveries: Repository<Delivery>,
     private readonly settings: SystemSettingsService,
+    @Optional() @InjectRepository(Order) private readonly orders?: Repository<Order>,
   ) {
     this.guards = {
       orderPriced: async ({ order }) => {
@@ -53,8 +54,14 @@ export class OrderStateMachine {
         }
       },
       paymentVerified: async ({ order }) => {
+        const paymentOrder = order.orderKind === 'child' && order.parentOrderId
+          ? await this.orders?.findOne({ where: { id: order.parentOrderId } })
+          : order;
+        if (!paymentOrder) {
+          throw new AppException('سفارش تجمیعی پرداخت یافت نشد.', ErrorCodes.ORDER_TRANSITION_FORBIDDEN, { statusCode: 409 });
+        }
         const payment = await this.payments.findOne({
-          where: { orderId: order.id, status: 'SUCCESS' },
+          where: { orderId: paymentOrder.id, status: 'SUCCESS' },
           order: { paidAt: 'DESC' },
         });
         if (!payment) {
@@ -62,7 +69,7 @@ export class OrderStateMachine {
             statusCode: 409,
           });
         }
-        if (Number(payment.amount) !== Number(order.payableTotal)) {
+        if (Number(payment.amount) !== Number(paymentOrder.payableTotal)) {
           throw new AppException('مبلغ پرداخت‌شده با مبلغ سفارش مطابقت ندارد.', ErrorCodes.PAYMENT_AMOUNT_MISMATCH, {
             statusCode: 409,
           });
@@ -133,8 +140,8 @@ export class OrderStateMachine {
             statusCode: 409,
           });
         }
-        if (!['REQUESTED', 'APPROVED', 'PROCESSING'].includes(refund.status)) {
-          throw new AppException('وضعیت بازپرداخت اجازه این تغییر را نمی‌دهد.', ErrorCodes.ORDER_TRANSITION_FORBIDDEN, {
+        if (refund.status !== 'DONE') {
+          throw new AppException('تا موفقیت قطعی درگاه، سفارش نباید بازپرداخت‌شده علامت بخورد.', ErrorCodes.ORDER_TRANSITION_FORBIDDEN, {
             statusCode: 409,
           });
         }

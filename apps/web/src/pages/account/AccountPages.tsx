@@ -189,6 +189,32 @@ export function AccountOrderDetailPage(): JSX.Element {
             ) : null}
           </div>
 
+          {order.packages?.length ? (
+            <Section title="بسته‌های فروشندگان">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {order.packages.map((pkg) => (
+                  <article key={pkg.id} className="cp-card space-y-2" aria-label={`بسته ${pkg.code}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <b dir="ltr">{pkg.code}</b>
+                      <StatusChip status={pkg.status} />
+                    </div>
+                    {pkg.items.map((item) => (
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <span>{item.partNameFa ?? 'قطعه'} × {toFaDigits(item.quantity)}</span>
+                        <b>{formatToman(item.lineTotal)}</b>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t border-line pt-2 text-xs">
+                      <span className="text-muted">ارسال {formatToman(pkg.deliveryFee)}</span>
+                      <b>{formatToman(pkg.payableTotal)}</b>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </Section>
+          ) : null}
+
+          {order.items.length ? (
           <Section title="اقلام">
             <div className="cp-card divide-y divide-line">
               {(order.items ?? []).map((item) => (
@@ -202,6 +228,7 @@ export function AccountOrderDetailPage(): JSX.Element {
               ))}
             </div>
           </Section>
+          ) : null}
 
           <Section title="خلاصه مالی">
             <div className="cp-card space-y-1.5 text-sm">
