@@ -10,7 +10,7 @@ import { OrdersService } from '../orders/orders.service';
 import { SystemSettingsService } from '../settings/system-settings.service';
 import { PaymentEvent } from './entities/payment-event.entity';
 import { Payment } from './entities/payment.entity';
-import type { PaymentProvider, ProviderReadiness } from './payment-provider.interface';
+import type { PaymentProvider, PaymentVerifyResult, ProviderReadiness } from './payment-provider.interface';
 import { SandboxPaymentProvider } from './providers/sandbox.provider';
 import { ZarinpalPaymentProvider } from './providers/zarinpal.provider';
 import { CreatePaymentDto, VerifyPaymentDto } from './dto/payment.dto';
@@ -201,7 +201,20 @@ export class PaymentsService {
     }
     if (payment.status === 'SUCCESS') {
       const order = await this.orders.loadOrder(payment.orderId);
-      return { payment, orderStatus: order.status, alreadyProcessed: true };
+      if (order.paymentStatus !== 'SUCCESS') {
+        const lockSeconds = await this.settings.getNumber('payment.verification_lock_seconds', 120);
+        const isRecent = Date.now() - payment.updatedAt.getTime() <= lockSeconds * 1_000;
+        if (isRecent) {
+          throw new AppException('قطعی‌سازی این پرداخت هم‌اکنون در حال انجام است؛ چند لحظه دیگر دوباره بررسی کنید.', ErrorCodes.PAYMENT_VERIFICATION_IN_PROGRESS, {
+            statusCode: 409,
+            retryable: true,
+          });
+        }
+        // بازیابی پس از توقف پردازش قبلی: markPaid ذاتاً تکرارپذیر است.
+        await this.orders.markPaid(payment.orderId, payment);
+      }
+      const updatedOrder = await this.orders.loadOrder(payment.orderId);
+      return { payment, orderStatus: updatedOrder.status, alreadyProcessed: true };
     }
     if (payment.expiresAt && payment.expiresAt < new Date() && payment.status !== 'FAILED') {
       payment.status = 'EXPIRED';
@@ -217,14 +230,53 @@ export class PaymentsService {
     }
     this.assertReady(provider);
 
+    // قفل توزیع‌شده با UPDATE شرطی: فقط یک پردازش در تمام instanceها اجازه تماس با
+    // درگاه و اعمال اثر مالی را دارد. قفل رهاشده پس از timeout قابل بازیابی است.
+    const lockSeconds = await this.settings.getNumber('payment.verification_lock_seconds', 120);
+    const staleBefore = new Date(Date.now() - lockSeconds * 1_000);
+    const claim = await this.payments
+      .createQueryBuilder()
+      .update(Payment)
+      .set({ status: 'VERIFYING' })
+      .where('"id" = :id', { id: payment.id })
+      .andWhere('(status IN (:...claimable) OR (status = :verifying AND "updatedAt" < :staleBefore))', {
+        claimable: ['CREATED', 'PENDING', 'FAILED', 'EXPIRED'],
+        verifying: 'VERIFYING',
+        staleBefore,
+      })
+      .execute();
+    if (!claim.affected) {
+      const current = await this.payments.findOne({ where: { id: payment.id } });
+      if (current?.status === 'SUCCESS') {
+        await this.orders.markPaid(current.orderId, current);
+        const currentOrder = await this.orders.loadOrder(current.orderId);
+        return { payment: current, orderStatus: currentOrder.status, alreadyProcessed: true };
+      }
+      if (current?.status === 'VERIFYING') {
+        throw new AppException('تأیید این تراکنش هم‌اکنون در حال انجام است؛ چند لحظه دیگر دوباره بررسی کنید.', ErrorCodes.PAYMENT_VERIFICATION_IN_PROGRESS, {
+          statusCode: 409,
+          retryable: true,
+        });
+      }
+      throw new AppException('این تراکنش قبلاً تعیین تکلیف شده است.', ErrorCodes.PAYMENT_ALREADY_PROCESSED, { statusCode: 409 });
+    }
+    payment.status = 'VERIFYING';
+
     const order = await this.orders.loadOrder(payment.orderId);
-    const result = await provider.verifyPayment({
-      orderId: payment.orderId,
-      amount: payment.amount,
-      authority: dto.authority ?? payment.gatewayAuthority ?? '',
-      signature: dto.signature ?? ((payment.requestPayload?.signature as string | null) ?? null),
-      gatewayStatus: dto.gatewayStatus ?? null,
-    });
+    let result: PaymentVerifyResult;
+    try {
+      result = await provider.verifyPayment({
+        orderId: payment.orderId,
+        amount: payment.amount,
+        authority: dto.authority ?? payment.gatewayAuthority ?? '',
+        signature: dto.signature ?? ((payment.requestPayload?.signature as string | null) ?? null),
+        gatewayStatus: dto.gatewayStatus ?? null,
+      });
+    } catch (error) {
+      await this.payments.update({ id: payment.id, status: 'VERIFYING' }, { status: 'PENDING' });
+      await this.recordEvent(payment.id, 'verify_error', 'internal', { message: (error as Error).message }).catch(() => undefined);
+      throw error;
+    }
     await this.recordEvent(payment.id, result.success ? 'verify_success' : 'verify_failed', 'gateway', result.raw);
 
     if (result.success) {
@@ -234,6 +286,8 @@ export class PaymentsService {
       payment.cardPanMasked = result.cardPanMasked ?? null;
       payment.paidAt = new Date();
       payment.verifyPayload = result.raw;
+      // ثبت SUCCESS پیش از گذار سفارش برای عبور گارد paymentConfirmed لازم است.
+      // درخواست‌های هم‌زمان تا پایان lock window وارد مسیر بازیابی نمی‌شوند.
       await this.payments.save(payment);
       await this.orders.markPaid(payment.orderId, payment);
       const updatedOrder = await this.orders.loadOrder(payment.orderId);
@@ -301,7 +355,7 @@ export class PaymentsService {
     const order = await this.orders.loadOrder(orderId);
     this.orders.assertReadAccess(order, userId, null);
     const payment = await this.payments.findOne({
-      where: { orderId, provider: 'sandbox', status: In(['CREATED', 'PENDING']) },
+      where: { orderId, provider: 'sandbox', status: In(['CREATED', 'PENDING', 'VERIFYING', 'SUCCESS']) },
       order: { createdAt: 'DESC' },
     });
     if (!payment) throw new NotFoundException('تراکنش پرداخت آزمایشی');

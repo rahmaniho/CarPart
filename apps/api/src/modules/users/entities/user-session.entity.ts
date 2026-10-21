@@ -7,7 +7,7 @@ import { User } from './user.entity';
 @Entity('user_sessions')
 export class UserSession extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

@@ -15,7 +15,7 @@ export class IdempotencyRecord extends BaseEntity {
   @Column({ length: 128 })
   key!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId!: string | null;
 
   @Column({ type: 'varchar', length: 16, nullable: true })

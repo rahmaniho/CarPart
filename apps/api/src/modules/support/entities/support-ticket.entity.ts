@@ -13,13 +13,13 @@ export class SupportTicket extends BaseEntity {
   code!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   orderId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   deliveryId!: string | null;
 
   @Column({ length: 200 })
@@ -35,7 +35,7 @@ export class SupportTicket extends BaseEntity {
   @Column({ length: 16, default: 'normal' })
   priority!: 'low' | 'normal' | 'high' | 'critical';
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   assignedTo!: string | null;
 
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })

@@ -313,7 +313,7 @@ export class SellerProductsService {
       reserved.push({ sellerProductId: item.sellerProductId, quantity: item.quantity });
       const updated = await this.products.findOne({ where: { id: item.sellerProductId } });
       if (updated) {
-        await this.recordMovement(updated, 0, 'reservation', actorId, `رزرو برای سفارش ${orderId}`, updated.stock);
+        await this.recordMovement(updated, 0, 'reservation', actorId, `رزرو برای سفارش ${orderId}`, updated.stock, orderId);
         results.push({
           sellerProductId: updated.id,
           stock: updated.stock,
@@ -339,7 +339,7 @@ export class SellerProductsService {
         .where('id = :id', { id: item.sellerProductId, qty: item.quantity })
         .execute();
       const product = await this.products.findOne({ where: { id: item.sellerProductId } });
-      if (product) await this.recordMovement(product, 0, 'release', null, `آزادسازی رزرو سفارش ${orderId}`, product.stock);
+      if (product) await this.recordMovement(product, 0, 'release', null, `آزادسازی رزرو سفارش ${orderId}`, product.stock, orderId);
     }
   }
 
@@ -358,7 +358,7 @@ export class SellerProductsService {
         .where('id = :id', { id: item.sellerProductId, qty: item.quantity })
         .execute();
       const product = await this.products.findOne({ where: { id: item.sellerProductId } });
-      if (product) await this.recordMovement(product, -item.quantity, 'sale', null, `کسر موجودی سفارش ${orderId}`, product.stock);
+      if (product) await this.recordMovement(product, -item.quantity, 'sale', null, `کسر موجودی سفارش ${orderId}`, product.stock, orderId);
     }
   }
 
@@ -381,11 +381,13 @@ export class SellerProductsService {
     actorId: string | null,
     note: string | null,
     stockAfter: number,
+    orderId: string | null = null,
   ): Promise<void> {
     await this.movements.save(
       this.movements.create({
         sellerProductId: product.id,
         branchId: product.branchId,
+        orderId,
         delta,
         stockAfter,
         reason,

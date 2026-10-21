@@ -21,6 +21,5 @@ export function numericOtp(digits = 5): string {
 }
 
 export function randomToken(bytes = 32): string {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('node:crypto').randomBytes(bytes).toString('base64url');
 }

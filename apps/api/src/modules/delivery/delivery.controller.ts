@@ -8,7 +8,7 @@ import { Audit } from '../../common/decorators/audit.decorator';
 import { AccountStatusGuard } from '../../common/guards/account-status.guard';
 import type { RequestUser } from '../../common/types/auth';
 import { DeliveryService } from './delivery.service';
-import { AcceptMissionDto, DeliverDto, FailAttemptDto, PickupDto, RejectMissionDto } from './dto/delivery.dto';
+import { DeliverDto, FailAttemptDto, PickupDto, RejectMissionDto } from './dto/delivery.dto';
 
 @ApiTags('ارسال (پیک)')
 @ApiBearerAuth()

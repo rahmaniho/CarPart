@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import type { NotificationChannel } from '@carpart/contract';
 
 export class UpdateProfileDto {

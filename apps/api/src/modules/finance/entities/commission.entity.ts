@@ -10,14 +10,14 @@ import { BaseEntity, moneyTransformer } from '../../../database/base.entity';
 @Entity('commissions')
 export class Commission extends BaseEntity {
   @Index({ unique: true })
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   branchId!: string;
 
   /** جمع اقلام سفارش (بدون ارسال و تخفیف) */
@@ -56,7 +56,7 @@ export class Commission extends BaseEntity {
   @Column({ length: 16, default: 'recorded' })
   status!: 'recorded' | 'reversed' | 'pending';
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   payoutId!: string | null;
 
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })

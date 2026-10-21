@@ -57,7 +57,6 @@ async function main(): Promise<void> {
     case 'settings': {
       const rows = await dataSource.query('SELECT "key", "value", "faLabel" FROM system_settings ORDER BY "group", "key"');
       for (const row of rows as Array<{ key: string; value: unknown; faLabel: string }>) {
-        // eslint-disable-next-line no-console
         console.log(`${row.key} = ${String(row.value)}  (${row.faLabel})`);
       }
       break;

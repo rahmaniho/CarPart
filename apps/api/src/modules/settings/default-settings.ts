@@ -23,6 +23,18 @@ export const DEFAULT_SETTINGS: DefaultSetting[] = [
   { key: 'platform.support_phone', group: 'platform', valueType: 'string', value: '021-91000000', faLabel: 'تلفن پشتیبانی', isPublic: true },
   { key: 'platform.default_city', group: 'platform', valueType: 'string', value: 'تهران', faLabel: 'شهر پیش‌فرض', isPublic: true },
 
+  // --- پرداخت ---
+  {
+    key: 'payment.verification_lock_seconds',
+    group: 'payment',
+    valueType: 'number',
+    value: 120,
+    faLabel: 'مهلت قفل تأیید پرداخت',
+    description: 'پس از این مهلت، پردازش VERIFYING رهاشده بر اثر توقف سرویس قابل تلاش مجدد است.',
+    unit: 'seconds',
+    constraints: { min: 30, max: 900 },
+  },
+
   // --- مالی ---
   {
     key: 'finance.commission.percent',

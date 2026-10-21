@@ -31,7 +31,7 @@ export class VehicleMake extends BaseEntity {
 @Entity('vehicle_models')
 export class VehicleModel extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   makeId!: string;
 
   @ManyToOne(() => VehicleMake, { onDelete: 'CASCADE' })
@@ -72,7 +72,7 @@ export class VehicleModel extends BaseEntity {
 @Entity('vehicle_variants')
 export class VehicleVariant extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   modelId!: string;
 
   @ManyToOne(() => VehicleModel, { onDelete: 'CASCADE' })

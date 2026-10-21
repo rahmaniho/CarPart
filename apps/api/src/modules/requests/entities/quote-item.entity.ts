@@ -7,17 +7,17 @@ import { Quote } from './quote.entity';
 @Entity('quote_items')
 export class QuoteItem extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   quoteId!: string;
 
   @ManyToOne(() => Quote, (quote) => quote.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quoteId' })
   quote!: Quote;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   sellerProductId!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   partId!: string | null;
 
   @Column({ length: 200 })

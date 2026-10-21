@@ -27,18 +27,18 @@ export class Delivery extends BaseEntity {
 
   /** در نسخه جاری هر سفارش یک مأموریت فعال دارد. */
   @Index({ unique: true })
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerBranchId!: string;
 
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   sellerId!: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   courierId!: string | null;
 
   @Index()

@@ -45,11 +45,6 @@ describe('مأموریت ارسال و پیک (e2e)', () => {
     return { ...seller.user, id: userId, profileKind: 'seller', profileId: sellerId } as RequestUser;
   }
 
-  async function courierUser(session: Session): Promise<RequestUser> {
-    const profile = await dataSource.getRepository(CourierProfile).findOne({ where: { userId: session.user.id } });
-    return { ...session.user, profileKind: 'courier', profileId: profile!.id } as RequestUser;
-  }
-
   /** یک سفارش را تا مرحله «آماده تحویل به پیک» پیش می‌برد و پرداخت می‌کند. */
   async function paidReadyOrder(): Promise<{ orderId: string; deliveryExpected: boolean }> {
     const addresses = await ctx.http.get('/api/v1/workshops/me/addresses').set('Authorization', `Bearer ${mechanic.token}`).expect(200);

@@ -26,18 +26,22 @@ async function bootstrap(): Promise<void> {
   // پیکربندی مشترک با تست‌های سرتاسری: helmet، کوکی‌پارسر، پیشوند مسیر، اعتبارسنجی و CORS
   configureApp(app, config);
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('کارپارت — API')
-    .setDescription('مستندات زنده REST API بازار قطعات یدکی خودرو (همه پاسخ‌ها و پیام‌ها فارسی است)')
-    .setVersion('1.0.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
-    .addApiKey({ type: 'apiKey', name: 'idempotency-key', in: 'header' }, 'idempotency')
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
-    customSiteTitle: 'مستندات API کارپارت',
-  });
+  // Swagger در production عمومی نمی‌شود تا سطح حمله و افشای قراردادهای مدیریتی کاهش یابد.
+  // مستندات تولید باید پشت VPN/احراز هویت سازمانی یا از artifact قرارداد ارائه شوند.
+  if (!config.app.isProduction) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('کارپارت — API')
+      .setDescription('مستندات زنده REST API بازار قطعات یدکی خودرو (همه پاسخ‌ها و پیام‌ها فارسی است)')
+      .setVersion('1.0.0')
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+      .addApiKey({ type: 'apiKey', name: 'idempotency-key', in: 'header' }, 'idempotency')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: { persistAuthorization: true, displayRequestDuration: true },
+      customSiteTitle: 'مستندات API کارپارت',
+    });
+  }
 
   if (config.seed.demoData && !config.app.isProduction) {
     await seedDatabase(app.get(DataSource), config, { force: false });
@@ -45,7 +49,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(config.app.port, '0.0.0.0');
   logger.log(`API روی ${config.app.apiUrl} در حال اجراست (محیط: ${config.app.env})`);
-  logger.log(`مستندات: ${config.app.apiUrl.replace(/\/api\/v1\/?$/, '')}/api/docs`);
+  if (!config.app.isProduction) logger.log(`مستندات: ${config.app.apiUrl.replace(/\/api\/v1\/?$/, '')}/api/docs`);
   logger.log(`پایگاه‌داده: ${config.db.type} | درگاه پرداخت: ${config.payment.provider} | نقشه: ${config.map.provider}`);
   if (config.payment.provider === 'sandbox') {
     logger.warn('درگاه پرداخت در حالت آزمایشی است؛ هیچ تراکنش واقعی انجام نمی‌شود.');
@@ -56,7 +60,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error) => {
-  // eslint-disable-next-line no-console
   console.error('راه‌اندازی سرویس ناموفق بود:', error);
   process.exit(1);
 });

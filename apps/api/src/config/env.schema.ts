@@ -88,6 +88,28 @@ export const envSchema = z.object({
   SEED_ADMIN_MOBILE: z.string().default('09120000000'),
   SEED_ADMIN_PASSWORD: z.string().default('ChangeMe!12345'),
   SEED_DEMO_DATA: boolish.default(true),
+}).superRefine((env, context) => {
+  if (env.NODE_ENV !== 'production') return;
+
+  const issue = (path: keyof typeof env, message: string): void => {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+  };
+
+  if (env.DB_TYPE !== 'postgres') issue('DB_TYPE', 'در محیط production فقط PostgreSQL مجاز است.');
+  if (env.DB_SYNC) issue('DB_SYNC', 'در محیط production باید DB_SYNC=false باشد و تغییرات فقط با migration اعمال شوند.');
+  if (!env.POSTGRES_PASSWORD || env.POSTGRES_PASSWORD.length < 12) {
+    issue('POSTGRES_PASSWORD', 'رمز PostgreSQL محیط production باید حداقل ۱۲ نویسه و از Secret Manager تأمین شود.');
+  }
+  if (env.SEED_DEMO_DATA) issue('SEED_DEMO_DATA', 'داده نمونه در محیط production باید غیرفعال باشد.');
+  if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
+    issue('JWT_REFRESH_SECRET', 'کلیدهای Access و Refresh باید مستقل باشند.');
+  }
+  if (env.DATA_ENCRYPTION_KEY === '0'.repeat(64) || /^([a-fA-F0-9])\1+$/.test(env.DATA_ENCRYPTION_KEY)) {
+    issue('DATA_ENCRYPTION_KEY', 'کلید رمزنگاری production نباید مقدار پیش‌فرض یا تکراری باشد.');
+  }
+  if (env.CORS_ORIGINS.split(',').some((origin) => origin.trim() === '*')) {
+    issue('CORS_ORIGINS', 'مبدأ wildcard در محیط production مجاز نیست.');
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

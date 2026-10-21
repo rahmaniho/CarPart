@@ -11,11 +11,11 @@ import { BaseEntity, moneyTransformer } from '../../../database/base.entity';
 @Index(['orderId', 'status'])
 export class Payment extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   /** شناسه درگاه: sandbox | zarinpal | ... */

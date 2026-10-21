@@ -7,15 +7,15 @@ import { BaseEntity, moneyTransformer } from '../../../database/base.entity';
 @Index(['couponId', 'userId'])
 @Index(['couponId', 'orderId'], { unique: true })
 export class CouponRedemption extends BaseEntity {
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   couponId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   orderId!: string;
 
   @Column({ type: 'bigint', transformer: moneyTransformer })

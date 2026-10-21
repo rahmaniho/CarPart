@@ -19,12 +19,15 @@
     "test": "npm run test -w @carpart/api",
     "test:watch": "npm run test:watch -w @carpart/api",
     "db:migrate": "npm run db:migrate -w @carpart/api",
+    "db:migrate:revert": "npm run db:migrate:revert -w @carpart/api",
     "db:seed": "npm run db:seed -w @carpart/api",
     "db:reset": "npm run db:reset -w @carpart/api",
-    "check:contract": "node scripts/check-contract.mjs"
+    "check:contract": "node scripts/check-contract.mjs",
+    "check:postgres-schema": "npm run build -w @carpart/api && DB_TYPE=postgres node scripts/validate-postgres-schema.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "js-yaml": "4.3.2",
     "prettier": "^3.4.2",
     "typescript": "^5.7.3"
   },

@@ -1,4 +1,3 @@
-import { Type } from 'class-transformer';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
 
 export class AcceptMissionDto {

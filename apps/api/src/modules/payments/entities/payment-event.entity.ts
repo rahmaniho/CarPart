@@ -6,7 +6,7 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['paymentId', 'createdAt'])
 export class PaymentEvent extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   paymentId!: string;
 
   @Column({ length: 64 })

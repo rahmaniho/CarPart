@@ -121,12 +121,13 @@ export const DELIVERY_STATUS_META: LabeledStatus<DeliveryStatus> = {
 };
 
 /* ---------------------------------- پرداخت -------------------------------- */
-export const PAYMENT_STATUSES = ['CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'PARTIALLY_REFUNDED', 'REFUNDED', 'EXPIRED'] as const;
+export const PAYMENT_STATUSES = ['CREATED', 'PENDING', 'VERIFYING', 'SUCCESS', 'FAILED', 'PARTIALLY_REFUNDED', 'REFUNDED', 'EXPIRED'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PAYMENT_STATUS_META: LabeledStatus<PaymentStatus> = {
   CREATED: { fa: 'ایجاد شده', tone: 'neutral' },
   PENDING: { fa: 'در انتظار پاسخ درگاه', tone: 'progress' },
+  VERIFYING: { fa: 'در حال تأیید سمت سرور', tone: 'progress' },
   SUCCESS: { fa: 'موفق', tone: 'success' },
   FAILED: { fa: 'ناموفق', tone: 'danger' },
   PARTIALLY_REFUNDED: { fa: 'بازپرداخت جزئی', tone: 'warning' },

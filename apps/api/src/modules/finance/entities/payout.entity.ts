@@ -15,7 +15,7 @@ export class Payout extends BaseEntity {
   recipientType!: PayoutRecipientType;
 
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   recipientId!: string;
 
   @Column({ type: 'varchar', length: 200, nullable: true })
@@ -49,10 +49,10 @@ export class Payout extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   note!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   processedBy!: string | null;
 
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })

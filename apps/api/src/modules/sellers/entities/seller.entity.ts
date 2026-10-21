@@ -8,7 +8,7 @@ import { User } from '../../users/entities/user.entity';
 @Entity('sellers')
 export class Seller extends BaseEntity {
   @Index({ unique: true })
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @OneToOne(() => User)
@@ -58,7 +58,7 @@ export class Seller extends BaseEntity {
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   verifiedAt!: Date | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   verifiedBy!: string | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })

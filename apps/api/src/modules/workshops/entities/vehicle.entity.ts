@@ -8,7 +8,7 @@ import { Workshop } from './workshop.entity';
 @Entity('vehicles')
 export class Vehicle extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   workshopId!: string;
 
   @ManyToOne(() => Workshop, { onDelete: 'CASCADE' })
@@ -19,14 +19,14 @@ export class Vehicle extends BaseEntity {
   nickname!: string | null;
 
   @Index()
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   modelId!: string | null;
 
   @ManyToOne(() => VehicleModel, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'modelId' })
   model!: VehicleModel | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   variantId!: string | null;
 
   @ManyToOne(() => VehicleVariant, { onDelete: 'SET NULL', nullable: true })

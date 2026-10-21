@@ -7,7 +7,7 @@ import { BaseEntity } from '../../../database/base.entity';
 @Index(['deliveryId', 'createdAt'])
 export class DeliveryEvent extends BaseEntity {
   @Index()
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   deliveryId!: string;
 
   @Column({ length: 48 })
@@ -19,7 +19,7 @@ export class DeliveryEvent extends BaseEntity {
   @Column({ type: 'text' })
   faDescription!: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   actorId!: string | null;
 
   @Column({ length: 16, default: 'user' })

@@ -353,7 +353,6 @@ export class RequestsService {
     let quotesExpired = 0;
 
     for (const request of due) {
-      const quoteCount = await this.quotes.count({ where: { requestId: request.id, status: 'SUBMITTED' } });
       request.quoteCount = await this.quotes.count({ where: { requestId: request.id } });
       request.status = request.quoteCount > 0 ? 'EXPIRED' : 'UNFULFILLED';
       request.closedAt = now;

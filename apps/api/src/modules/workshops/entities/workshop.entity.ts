@@ -7,7 +7,7 @@ import { User } from '../../users/entities/user.entity';
 @Entity('workshops')
 export class Workshop extends BaseEntity {
   @Index({ unique: true })
-  @Column({ length: 36 })
+  @Column({ type: 'uuid' })
   userId!: string;
 
   @OneToOne(() => User)

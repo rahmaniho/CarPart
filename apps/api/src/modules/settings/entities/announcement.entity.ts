@@ -28,6 +28,6 @@ export class Announcement extends BaseEntity {
   @Column({ type: DATE_COLUMN_TYPE, nullable: true })
   expiresAt!: Date | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 }
