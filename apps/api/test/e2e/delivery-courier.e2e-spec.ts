@@ -261,4 +261,81 @@ describe('مأموریت ارسال و پیک (e2e)', () => {
     expect(Array.isArray(adminLocations)).toBe(true);
     void admin;
   }, 180_000);
+
+  it('۲۳) GPS مأموریت، رسیدن به فروشگاه و دسترسی خریدار/فروشنده را امن و یک‌بار ثبت می‌کند', async () => {
+    const { orderId } = await paidReadyOrder();
+    const delivery = await waitFor(
+      async () => dataSource.getRepository(Delivery).findOne({ where: { orderId } }),
+      (row) => Boolean(row && row.courierId),
+      30_000,
+    );
+    expect(delivery!.pickupPoint.lat).not.toBeNull();
+    expect(delivery!.pickupPoint.lng).not.toBeNull();
+
+    const profile = await dataSource.getRepository(CourierProfile).findOne({ where: { id: delivery!.courierId! } });
+    const owner = profile!.userId === courier.user.id ? courier : courier2;
+    const other = profile!.userId === courier.user.id ? courier2 : courier;
+    await ctx.http
+      .post(`/api/v1/courier/deliveries/${delivery!.id}/accept`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({})
+      .expect((res) => {
+        if (![200, 201].includes(res.status)) throw new Error(`پذیرش مأموریت ناموفق: ${res.status}`);
+      });
+
+    const sample = {
+      deliveryId: delivery!.id,
+      lat: delivery!.pickupPoint.lat,
+      lng: delivery!.pickupPoint.lng,
+      accuracyM: 12,
+      speedKmh: 8,
+      heading: 180,
+      capturedAt: new Date().toISOString(),
+    };
+
+    // نمونه بدون مأموریت پذیرفته‌شده و تزریق موقعیت توسط پیک دیگر هر دو رد می‌شوند.
+    const { deliveryId: _deliveryId, ...unscopedSample } = sample;
+    await ctx.http.post('/api/v1/couriers/me/location').set('Authorization', `Bearer ${owner.token}`).send(unscopedSample).expect(400);
+    await ctx.http.post('/api/v1/couriers/me/location').set('Authorization', `Bearer ${other.token}`).send(sample).expect(403);
+
+    const first = await ctx.http
+      .post('/api/v1/couriers/me/location')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send(sample)
+      .expect(201);
+    expect(first.body.sellerArrivalDetected).toBe(true);
+    expect(first.body.distanceToPickupM).toBe(0);
+
+    // Geofence و اعلان رسیدن در ارسال‌های بعدی تکرار نمی‌شوند.
+    const second = await ctx.http
+      .post('/api/v1/couriers/me/location')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ ...sample, capturedAt: new Date().toISOString() })
+      .expect(201);
+    expect(second.body.sellerArrivalDetected).toBe(false);
+
+    const buyerView = await ctx.http.get(`/api/v1/orders/${orderId}/tracking`).set('Authorization', `Bearer ${mechanic.token}`).expect(200);
+    expect(buyerView.body.location).toMatchObject({ isFresh: true, distanceToPickupM: 0 });
+    expect(buyerView.body.sellerArrival.detected).toBe(true);
+
+    const sellerView = await ctx.http.get(`/api/v1/seller/deliveries/${orderId}`).set('Authorization', `Bearer ${seller.token}`).expect(200);
+    expect(sellerView.body.location.lat).toBeCloseTo(Number(delivery!.pickupPoint.lat), 5);
+    expect(sellerView.body.sellerArrival.detected).toBe(true);
+
+    const otherMechanic = await login(ctx, DEMO.mechanic2);
+    await ctx.http.get(`/api/v1/orders/${orderId}/tracking/location`).set('Authorization', `Bearer ${otherMechanic.token}`).expect(403);
+
+    const notifications = await ctx.http.get('/api/v1/notifications?pageSize=100').set('Authorization', `Bearer ${seller.token}`).expect(200);
+    const arrivalNotices = notifications.body.items.filter((item: { eventKey: string; data?: { deliveryId?: string } }) =>
+      item.eventKey === 'delivery.arrived_at_seller' && item.data?.deliveryId === delivery!.id,
+    );
+    expect(arrivalNotices).toHaveLength(1);
+
+    await dataSource.getRepository(Delivery).update({ id: delivery!.id }, { status: 'DELIVERED' });
+    await ctx.http
+      .post('/api/v1/couriers/me/location')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ ...sample, capturedAt: new Date().toISOString() })
+      .expect(409);
+  }, 180_000);
 });

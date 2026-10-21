@@ -289,12 +289,65 @@ export interface DeliveryMission {
   [k: string]: unknown;
 }
 
+export interface LiveDeliveryLocation {
+  lat: number;
+  lng: number;
+  accuracyM: number | null;
+  speedKmh: number | null;
+  heading: number | null;
+  recordedAt: string;
+  ageSeconds: number;
+  isFresh: boolean;
+  distanceToPickupM: number | null;
+  distanceToDropoffM: number | null;
+}
+
+export interface DeliveryTracking {
+  deliveryId: string;
+  code: string;
+  status: DeliveryStatus;
+  statusFa: string;
+  pickupPoint: DeliveryPoint;
+  dropoffPoint: DeliveryPoint;
+  courier: { name: string; phoneMasked: string; ratingAvg: number; vehicleType: string | null } | null;
+  distanceKm: number | null;
+  estimatedMinutes: number | null;
+  estimatedArrival: string | null;
+  events: Array<{ at: string; fa: string; status: DeliveryStatus | null }>;
+  location: LiveDeliveryLocation | null;
+  sellerArrival: { detected: boolean; at: string | null };
+  refreshAfterSeconds: number;
+  notice: string;
+  deliveryOtp?: string | null;
+  pickupCode?: string | null;
+}
+
+export interface CourierLocationInput {
+  lat: number;
+  lng: number;
+  accuracyM?: number;
+  speedKmh?: number;
+  heading?: number;
+  deliveryId: string;
+  capturedAt?: string;
+}
+
+export interface CourierLocationUpdate {
+  ok: true;
+  recordedAt: string;
+  deliveryId: string;
+  distanceToPickupM: number | null;
+  distanceToDropoffM: number | null;
+  sellerArrivalDetected: boolean;
+}
+
 export interface CourierProfile {
   id: string;
   userId: string;
   displayName?: string | null;
   vehicleType?: string | null;
   verificationStatus: string;
+  availability?: 'online' | 'offline';
   isOnline?: boolean;
   ratingAvg?: number;
   ratingCount?: number;

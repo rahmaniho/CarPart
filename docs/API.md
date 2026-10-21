@@ -30,6 +30,13 @@
 ## سفارش (مکانیک)
 `GET/POST /orders`، `GET /orders/:id`، `GET /orders/:id/events`، `POST /orders/:id/checkout|transition|cancel`، `GET /orders/:orderId/tracking`
 
+ردیابی GPS مأموریت:
+- `POST /couriers/me/location` — ارسال نمونه GPS توسط پیک تخصیص‌یافته؛ ورودی شامل `deliveryId`، مختصات، دقت، سرعت، جهت و زمان ثبت دستگاه
+- `GET /orders/:orderId/tracking` — نمای Typed آخرین موقعیت، تازگی، فاصله تا فروشگاه/مقصد و وضعیت Geofence برای مالک سفارش و فروشنده همان سفارش
+- `GET /orders/:orderId/tracking/location` — نمای حداقلی آخرین موقعیت با همان کنترل مالکیت سمت سرور
+
+جزئیات امنیت، تنظیمات و محدودیت پس‌زمینه: [`LIVE_COURIER_TRACKING.md`](./LIVE_COURIER_TRACKING.md)
+
 ## درخواست تأمین (RFQ)
 `GET/POST /requests`، `GET /requests/:id`، `GET /requests/:id/quotes` (مقایسه رتبه‌بندی‌شده)، `POST /requests/quotes/:quoteId/accept`، `POST /requests/:id/cancel`
 

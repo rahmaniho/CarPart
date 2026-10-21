@@ -162,6 +162,15 @@ export const NOTIFICATION_EVENTS: Record<string, NotificationEventDefinition> = 
     tone: 'success',
     link: '/mechanic/orders/{orderId}',
   },
+  'delivery.arrived_at_seller': {
+    key: 'delivery.arrived_at_seller',
+    titleFa: 'پیک به فروشگاه نزدیک شده است',
+    bodyFa: 'پیک مأموریت {code} به محدوده فروشگاه رسیده است؛ لطفاً بسته را برای تحویل آماده کنید.',
+    channels: ['inapp', 'push'],
+    tone: 'progress',
+    link: '/seller/orders',
+    respectQuietHours: false,
+  },
   'delivery.picked_up': {
     key: 'delivery.picked_up',
     titleFa: 'بسته از فروشگاه دریافت شد',

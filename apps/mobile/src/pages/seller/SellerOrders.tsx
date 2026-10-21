@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, type OrderRow } from '@carpart/api-client';
 import { api } from '../../lib/api';
 import { dateFa, formatToman } from '../../lib/format';
+import { LiveTrackingCard } from '../../components/LiveTrackingCard';
 import { ErrorBox, Section, Spinner, StatusChip } from '../../components/ui';
 import { SellerShell } from './SellerShell';
 
@@ -21,6 +22,12 @@ export default function SellerOrders(): JSX.Element {
   const orders = useQuery({ queryKey: ['seller-orders'], queryFn: () => api.sellers.orders({ pageSize: 20 }) });
   const detail = useQuery({ queryKey: ['seller-order', selected?.id], queryFn: () => api.sellers.orderDetail(selected!.id), enabled: Boolean(selected) });
   const events = useQuery({ queryKey: ['seller-order-events', selected?.id], queryFn: () => api.sellers.orderEvents(selected!.id), enabled: Boolean(selected) });
+  const tracking = useQuery({
+    queryKey: ['seller-order-tracking', selected?.id],
+    queryFn: () => api.delivery.orderTracking(selected!.id),
+    enabled: Boolean(selected),
+    refetchInterval: 10_000,
+  });
 
   const transition = useMutation({
     mutationFn: ({ id, to }: { id: string; to: string }) => api.sellers.transitionOrder(id, to),
@@ -57,6 +64,7 @@ export default function SellerOrders(): JSX.Element {
             {detail.isLoading ? <Spinner /> : null}
             {detail.data ? (
               <>
+                {tracking.data?.deliveryId ? <LiveTrackingCard tracking={tracking.data} viewer="seller" /> : null}
                 <ul className="space-y-1 text-xs">
                   {(detail.data.items ?? []).map((item) => (
                     <li key={item.id} className="flex justify-between rounded-lg bg-slate-50 px-2 py-1.5">

@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DeliveryMission } from '@carpart/api-client';
 import { api } from '../../lib/api';
 import { useCountdown } from '../../lib/hooks';
-import { getCurrentPosition, watchPosition } from '../../lib/native';
 import { formatToman, toFaDigits } from '../../lib/format';
 import { AppShell, type TabDef } from '../../components/AppShell';
 import { EmptyState, ErrorBox, Section, Spinner } from '../../components/ui';
@@ -87,31 +86,7 @@ export default function CourierHome(): JSX.Element {
     onError: () => setError('تغییر وضعیت آنلاین ناموفق بود'),
   });
 
-  const sendLocation = useMutation({
-    mutationFn: async () => {
-      const position = await getCurrentPosition();
-      return api.couriers.sendLocation(position.lat, position.lng);
-    },
-    onSuccess: () => setError(null),
-    onError: (err) => setError(err instanceof Error ? err.message : 'ارسال موقعیت ناموفق بود'),
-  });
-
-  const isOnline = Boolean(profile.data?.isOnline);
-
-  // تا وقتی پیک آنلاین و اپ باز است، موقعیت هر ~۱۵ ثانیه ارسال می‌شود
-  useEffect(() => {
-    if (!isOnline) return;
-    let stop: (() => void) | undefined;
-    void watchPosition(
-      (position) => {
-        void api.couriers.sendLocation(position.lat, position.lng).catch(() => undefined);
-      },
-      (message) => setError(message),
-    ).then((cleanup) => {
-      stop = cleanup;
-    });
-    return () => stop?.();
-  }, [isOnline]);
+  const isOnline = profile.data?.availability === 'online' || Boolean(profile.data?.isOnline);
 
   return (
     <AppShell
@@ -137,19 +112,11 @@ export default function CourierHome(): JSX.Element {
       />
       {error ? <ErrorBox message={error} /> : null}
 
-      {isOnline ? (
-        <div className="cp-card border-emerald-200 bg-emerald-50 text-xs leading-6 text-emerald-800">📍 موقعیت زنده در زمان باز بودن اپ هر ۱۵ ثانیه ارسال می‌شود.</div>
-      ) : null}
-
       {!isOnline ? (
         <div className="cp-card border-amber-200 bg-amber-50 text-xs leading-6 text-amber-900">
           برای دریافت مأموریت، وضعیت خود را «آنلاین» کنید. مأموریت‌ها بر اساس نزدیکی و محدوده، به شما پیشنهاد می‌شوند.
         </div>
       ) : null}
-
-      <button type="button" className="cp-btn-ghost w-full" disabled={sendLocation.isPending} onClick={() => sendLocation.mutate()}>
-        📍 ارسال موقعیت فعلی من
-      </button>
 
       <Section title={`پیشنهادهای جدید (${offers.data?.meta.total ?? 0})`}>
         {offers.isLoading ? <Spinner /> : null}

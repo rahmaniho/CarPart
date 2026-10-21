@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { metersBetween } from '@carpart/contract';
 import { Repository } from 'typeorm';
 import { AppException, ErrorCodes, NotFoundException } from '../../common/errors/app-error';
 import { CONFIG_TOKEN, type AppConfig } from '../../config/configuration';
@@ -9,6 +10,9 @@ import { CourierProfile } from './entities/courier-profile.entity';
 import { CourierPayoutInfoDto, UpdateLocationDto, UpsertCourierDto } from './dto/courier.dto';
 import { Delivery } from '../delivery/entities/delivery.entity';
 import { Payout } from '../finance/entities/payout.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Seller } from '../sellers/entities/seller.entity';
+import { SystemSettingsService } from '../settings/system-settings.service';
 import { User } from '../users/entities/user.entity';
 
 export interface CourierDashboard {
@@ -19,6 +23,15 @@ export interface CourierDashboard {
   pendingPayout: number;
 }
 
+export interface LocationUpdateResult {
+  ok: true;
+  recordedAt: string;
+  deliveryId: string;
+  distanceToPickupM: number | null;
+  distanceToDropoffM: number | null;
+  sellerArrivalDetected: boolean;
+}
+
 @Injectable()
 export class CouriersService {
   constructor(
@@ -26,8 +39,11 @@ export class CouriersService {
     @InjectRepository(CourierLocation) private readonly locations: Repository<CourierLocation>,
     @InjectRepository(Delivery) private readonly deliveries: Repository<Delivery>,
     @InjectRepository(Payout) private readonly payouts: Repository<Payout>,
+    @InjectRepository(Seller) private readonly sellers: Repository<Seller>,
     @InjectRepository(User) private readonly users: Repository<User>,
     @Inject(CONFIG_TOKEN) private readonly config: AppConfig,
+    private readonly notifications: NotificationsService,
+    private readonly settings: SystemSettingsService,
   ) {}
 
   async findByUserId(userId: string): Promise<CourierProfile | null> {
@@ -129,34 +145,95 @@ export class CouriersService {
     return this.couriers.save(courier);
   }
 
-  async updateLocation(userId: string, dto: UpdateLocationDto): Promise<{ ok: true; recordedAt: string }> {
-    const courier = await this.requireCourier(userId);
+  async updateLocation(userId: string, dto: UpdateLocationDto): Promise<LocationUpdateResult> {
+    const courier = await this.requireVerifiedCourier(userId);
     const now = new Date();
+    const capturedAt = dto.capturedAt ? new Date(dto.capturedAt) : now;
+    const ageMs = now.getTime() - capturedAt.getTime();
+    const freshSeconds = await this.settings.getNumber('courier.location.fresh_seconds', 45);
+    if (!Number.isFinite(capturedAt.getTime()) || ageMs > freshSeconds * 1_000 || ageMs < -30_000) {
+      throw new AppException('نمونه موقعیت قدیمی یا نامعتبر است؛ GPS را دوباره به‌روزرسانی کنید.', ErrorCodes.VALIDATION_FAILED, {
+        statusCode: 400,
+      });
+    }
+
+    const delivery = await this.deliveries.findOne({ where: { id: dto.deliveryId } });
+    if (!delivery || delivery.courierId !== courier.id) {
+      throw new AppException('ارسال موقعیت فقط برای مأموریت فعال خود پیک مجاز است.', ErrorCodes.PERMISSION_DENIED, { statusCode: 403 });
+    }
+    if (!['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(delivery.status)) {
+      throw new AppException('اشتراک‌گذاری موقعیت برای این مأموریت فعال نیست.', ErrorCodes.ORDER_TRANSITION_FORBIDDEN, { statusCode: 409 });
+    }
+
     courier.currentLat = dto.lat;
     courier.currentLng = dto.lng;
-    courier.locationUpdatedAt = now;
+    courier.locationUpdatedAt = capturedAt;
     await this.couriers.save(courier);
 
-    // ذخیره نمونه موقعیت فقط در چارچوب مأموریت فعال (رعایت حریم خصوصی)
-    if (dto.deliveryId) {
-      const delivery = await this.deliveries.findOne({ where: { id: dto.deliveryId, courierId: courier.id } });
-      if (delivery && !['DELIVERED', 'CANCELLED', 'FAILED'].includes(delivery.status)) {
-        await this.locations.save(
-          this.locations.create({
-            courierId: courier.id,
-            deliveryId: delivery.id,
-            lat: dto.lat,
-            lng: dto.lng,
-            accuracyM: dto.accuracyM ?? null,
-            speedKmh: dto.speedKmh ?? null,
-            heading: dto.heading ?? null,
-            recordedAt: now,
-            source: 'app',
-          }),
-        );
+    await this.locations.save(
+      this.locations.create({
+        courierId: courier.id,
+        deliveryId: delivery.id,
+        lat: dto.lat,
+        lng: dto.lng,
+        accuracyM: dto.accuracyM ?? null,
+        speedKmh: dto.speedKmh ?? null,
+        heading: dto.heading ?? null,
+        recordedAt: capturedAt,
+        source: 'app',
+      }),
+    );
+
+    const current = { lat: dto.lat, lng: dto.lng };
+    const pickup = delivery.pickupPoint.lat != null && delivery.pickupPoint.lng != null
+      ? { lat: delivery.pickupPoint.lat, lng: delivery.pickupPoint.lng }
+      : null;
+    const dropoff = delivery.dropoffPoint.lat != null && delivery.dropoffPoint.lng != null
+      ? { lat: delivery.dropoffPoint.lat, lng: delivery.dropoffPoint.lng }
+      : null;
+    const distanceToPickupM = pickup ? Math.round(metersBetween(current, pickup)) : null;
+    const distanceToDropoffM = dropoff ? Math.round(metersBetween(current, dropoff)) : null;
+    let sellerArrivalDetected = false;
+
+    // Geofence فقط در مسیر فروشگاه و با نمونه GPS به‌اندازه کافی دقیق فعال می‌شود.
+    if (delivery.status === 'ACCEPTED' && pickup && distanceToPickupM !== null) {
+      const [arrivalRadiusM, maxAccuracyM] = await Promise.all([
+        this.settings.getNumber('courier.location.arrival_radius_m', 300),
+        this.settings.getNumber('courier.location.max_accuracy_m', 150),
+      ]);
+      const accuracyAcceptable = dto.accuracyM != null && dto.accuracyM <= maxAccuracyM;
+      if (accuracyAcceptable && distanceToPickupM <= arrivalRadiusM) {
+        const result = await this.deliveries
+          .createQueryBuilder()
+          .update(Delivery)
+          .set({ arrivedAtSellerAt: now })
+          .where('id = :id AND arrivedAtSellerAt IS NULL', { id: delivery.id })
+          .execute();
+        sellerArrivalDetected = (result.affected ?? 0) > 0;
+        if (sellerArrivalDetected) {
+          const seller = await this.sellers.findOne({ where: { id: delivery.sellerId } });
+          if (seller) {
+            await this.notifications.notify({
+              userId: seller.userId,
+              eventKey: 'delivery.arrived_at_seller',
+              subjectId: delivery.id,
+              vars: { code: delivery.code, orderId: delivery.orderId },
+              data: { deliveryId: delivery.id, orderId: delivery.orderId, distanceM: distanceToPickupM },
+              dedupeKey: `delivery-arrived-seller:${delivery.id}`,
+            });
+          }
+        }
       }
     }
-    return { ok: true, recordedAt: now.toISOString() };
+
+    return {
+      ok: true,
+      recordedAt: capturedAt.toISOString(),
+      deliveryId: delivery.id,
+      distanceToPickupM,
+      distanceToDropoffM,
+      sellerArrivalDetected,
+    };
   }
 
   async updatePayoutInfo(userId: string, dto: CourierPayoutInfoDto): Promise<Record<string, string>> {

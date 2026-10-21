@@ -69,6 +69,7 @@ python3 scripts/smoke_e2e.py          # آزمون دود روی سرور در �
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | معماری و جریان داده |
 | [docs/DATABASE.md](docs/DATABASE.md) | مدل پایگاه‌داده |
 | [docs/API.md](docs/API.md) | مرجع REST API |
+| [docs/LIVE_COURIER_TRACKING.md](docs/LIVE_COURIER_TRACKING.md) | ردیابی GPS پیک، Geofence، اعلان و محدودیت پس‌زمینه |
 | [docs/USER_FLOWS.md](docs/USER_FLOWS.md) | جریان‌های کاربری |
 | [docs/SECURITY.md](docs/SECURITY.md) | ملاحظات امنیتی |
 | [docs/TESTING.md](docs/TESTING.md) | راهبرد و پوشش آزمون |

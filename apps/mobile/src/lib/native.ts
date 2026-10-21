@@ -148,6 +148,20 @@ export interface PositionResult {
   lat: number;
   lng: number;
   accuracy: number | null;
+  speedKmh: number | null;
+  heading: number | null;
+  capturedAt: string;
+}
+
+function positionResult(position: GeolocationPosition | { coords: { latitude: number; longitude: number; accuracy?: number | null; speed?: number | null; heading?: number | null }; timestamp?: number }): PositionResult {
+  return {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+    accuracy: position.coords.accuracy ?? null,
+    speedKmh: position.coords.speed == null ? null : Math.max(0, position.coords.speed * 3.6),
+    heading: position.coords.heading ?? null,
+    capturedAt: new Date(position.timestamp ?? Date.now()).toISOString(),
+  };
 }
 
 /** دریافت موقعیت فعلی — افزونه نیتیو با fallback مرورگر */
@@ -155,7 +169,7 @@ export async function getCurrentPosition(): Promise<PositionResult> {
   if (hasPlugin('Geolocation')) {
     try {
       const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10_000 });
-      return { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null };
+      return positionResult(position);
     } catch {
       /* سقوط به fallback مرورگر */
     }
@@ -166,7 +180,7 @@ export async function getCurrentPosition(): Promise<PositionResult> {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null }),
+      (position) => resolve(positionResult(position)),
       () => reject(new Error('دریافت موقعیت ممکن نشد؛ دسترسی مکان را بررسی کنید')),
       { enableHighAccuracy: true, timeout: 10_000 },
     );
@@ -192,7 +206,7 @@ export async function watchPosition(
             return;
           }
           if (!position) return;
-          onPosition({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null });
+          onPosition(positionResult(position));
         },
       );
       return () => {
@@ -205,7 +219,7 @@ export async function watchPosition(
   }
   if (typeof navigator === 'undefined' || !navigator.geolocation) return () => undefined;
   const id = navigator.geolocation.watchPosition(
-    (position) => onPosition({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy ?? null }),
+    (position) => onPosition(positionResult(position)),
     () => onError?.('دریافت موقعیت زنده ممکن نشد.'),
     { enableHighAccuracy: true, timeout: 15_000, maximumAge: 10_000 },
   );

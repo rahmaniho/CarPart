@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { idempotencyKey } from '../../lib/hooks';
 import { dateFa, formatToman } from '../../lib/format';
 import { AppShell } from '../../components/AppShell';
+import { LiveTrackingCard } from '../../components/LiveTrackingCard';
 import { EmptyState, ErrorBox, Field, Section, Spinner, StatusChip } from '../../components/ui';
 import { MECHANIC_TABS } from './MechanicHome';
 
@@ -78,7 +79,7 @@ export function OrderDetailPage(): JSX.Element {
     queryKey: ['order-tracking', id],
     queryFn: () => api.orders.tracking(id!),
     enabled: Boolean(id && detail.data && ['WAITING_FOR_COURIER', 'COURIER_ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(detail.data.status)),
-    refetchInterval: 15_000,
+    refetchInterval: 10_000,
   });
 
   const cancel = useMutation({
@@ -209,13 +210,8 @@ export function OrderDetailPage(): JSX.Element {
           </Section>
 
           {tracking.data ? (
-            <Section title="رهگیری ارسال (هر ۱۵ ثانیه به‌روزرسانی)">
-              <div className="cp-card space-y-1 text-xs leading-6">
-                <p>وضعیت مأموریت: <b>{String(tracking.data.status ?? tracking.data.deliveryStatus ?? 'در حال پیگیری')}</b></p>
-                <p>مبدأ: {String((tracking.data.pickupPoint as { addressText?: string } | undefined)?.addressText ?? 'فروشگاه')}</p>
-                <p>مقصد: {String((tracking.data.dropoffPoint as { addressText?: string } | undefined)?.addressText ?? 'نشانی شما')}</p>
-                {tracking.data.estimatedMinutes ? <p>زمان تخمینی: {String(tracking.data.estimatedMinutes)} دقیقه (تضمین‌شده نیست)</p> : null}
-              </div>
+            <Section title="رهگیری زنده ارسال">
+              <LiveTrackingCard tracking={tracking.data} viewer="customer" />
             </Section>
           ) : null}
 

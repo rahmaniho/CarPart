@@ -1,5 +1,6 @@
 import type { Http } from '../http';
 import type {
+  DeliveryTracking,
   OrderDetail,
   OrderEventRow,
   OrderRow,
@@ -27,7 +28,7 @@ export interface OrdersApi {
   checkout(id: string, idempotencyKey?: string): Promise<OrderDetail>;
   transition(id: string, to: string, reason?: string): Promise<OrderDetail>;
   cancel(id: string, reason: string): Promise<OrderDetail>;
-  tracking(orderId: string): Promise<Record<string, unknown>>;
+  tracking(orderId: string): Promise<DeliveryTracking>;
 }
 
 export interface RequestsApi {
@@ -68,7 +69,7 @@ export function ordersApi(http: Http): OrdersApi {
     checkout: (id, idempotencyKey) => http.post<OrderDetail>(`/orders/${id}/checkout`, {}, idempotencyKey ? { idempotencyKey } : {}),
     transition: (id, to, reason) => http.post<OrderDetail>(`/orders/${id}/transition`, { to, reason }),
     cancel: (id, reason) => http.post<OrderDetail>(`/orders/${id}/cancel`, { reason }),
-    tracking: (orderId) => http.get<Record<string, unknown>>(`/orders/${orderId}/tracking`),
+    tracking: (orderId) => http.get<DeliveryTracking>(`/orders/${orderId}/tracking`),
   };
 }
 

@@ -46,7 +46,7 @@ describe('لایه نیتیو — fallback وب', () => {
 
   it('موقعیت از geolocation مرورگر خوانده می‌شود', async () => {
     const getCurrentPositionMock = vi.fn((success: (pos: unknown) => void) => {
-      success({ coords: { latitude: 35.735, longitude: 51.41, accuracy: 12 } });
+      success({ coords: { latitude: 35.735, longitude: 51.41, accuracy: 12, speed: 5, heading: 90 }, timestamp: 1_700_000_000_000 });
     });
     Object.defineProperty(globalThis.navigator, 'geolocation', {
       value: { getCurrentPosition: getCurrentPositionMock },
@@ -57,6 +57,9 @@ describe('لایه نیتیو — fallback وب', () => {
     expect(position.lat).toBeCloseTo(35.735);
     expect(position.lng).toBeCloseTo(51.41);
     expect(position.accuracy).toBe(12);
+    expect(position.speedKmh).toBe(18);
+    expect(position.heading).toBe(90);
+    expect(position.capturedAt).toBe('2023-11-14T22:13:20.000Z');
   });
 
   it('موقعیت مرورگر: خطای دسترسی با پیام فارسی', async () => {
