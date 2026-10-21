@@ -1,4 +1,4 @@
-import type { DataSource } from 'typeorm';
+import { In, type DataSource } from 'typeorm';
 import { CouponsService } from '../../src/modules/coupons/coupons.service';
 import { Commission } from '../../src/modules/finance/entities/commission.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
@@ -46,6 +46,21 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
     const offer = response.body.items.find((item: { stock: number }) => item.stock >= quantity);
     if (!offer) throw new Error('پیشنهادی با موجودی کافی یافت نشد');
     return { sellerProductId: offer.sellerProductId, price: offer.price, stock: offer.stock, nameFa: offer.part.nameFa };
+  }
+
+  async function pickDistinctSellerOffers(): Promise<[SellerProduct, SellerProduct]> {
+    const products = await dataSource.getRepository(SellerProduct).find({
+      where: { isActive: true },
+      relations: { seller: true },
+      order: { stock: 'DESC' },
+    });
+    const available = products.filter(
+      (product) => product.availableStock > 0 && product.seller?.isActive && product.seller.verificationStatus === 'APPROVED',
+    );
+    const first = available[0];
+    const second = available.find((product) => product.sellerId !== first?.sellerId);
+    if (!first || !second) throw new Error('دو پیشنهاد فعال از فروشندگان متفاوت برای آزمون موجود نیست');
+    return [first, second];
   }
 
   async function createOrder(
@@ -125,6 +140,178 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
     const count = await dataSource.getRepository(Order).count({ where: { idempotencyKey: key } });
     expect(count).toBe(1);
   }, 60_000);
+
+  it('۳-ب) سبد چندفروشنده‌ای یک Parent مالی و بسته‌های مستقل با رزرو اتمیک می‌سازد', async () => {
+    const [first, second] = await pickDistinctSellerOffers();
+    const addressId = await defaultAddressId();
+    const key = `t-multi-${Date.now()}`;
+    const before = new Map(
+      [first, second].map((product) => [product.id, { reserved: product.reservedStock, stock: product.stock }]),
+    );
+
+    const created = await createOrder(
+      mechanic,
+      {
+        items: [
+          { sellerProductId: first.id, quantity: 1 },
+          { sellerProductId: second.id, quantity: 1 },
+        ],
+        deliveryAddressId: addressId,
+      },
+      { 'Idempotency-Key': key },
+    );
+    expect(created.status).toBe(201);
+    expect(created.body.orderKind).toBe('parent');
+    expect(created.body.sellerId).toBeNull();
+    expect(created.body.branchId).toBeNull();
+    expect(created.body.items).toHaveLength(0);
+    expect(created.body.packages).toHaveLength(2);
+    expect(new Set(created.body.packages.map((pkg: { sellerId: string }) => pkg.sellerId)).size).toBe(2);
+    expect(created.body.payableTotal).toBe(
+      created.body.packages.reduce((sum: number, pkg: { payableTotal: number }) => sum + pkg.payableTotal, 0),
+    );
+    expect(created.body.deliveryFee).toBe(
+      created.body.packages.reduce((sum: number, pkg: { deliveryFee: number }) => sum + pkg.deliveryFee, 0),
+    );
+
+    // Child یک مرز Fulfillment است و نباید Charge یا لغو مالی مستقلی دور از Parent بسازد.
+    const childId = created.body.packages[0].id as string;
+    const childPayment = await ctx.http
+      .post('/api/v1/payments')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId: childId });
+    expect(childPayment.status).toBe(409);
+    const childCancel = await ctx.http
+      .post(`/api/v1/orders/${childId}/cancel`)
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ reason: 'لغو مستقیم بسته' });
+    expect(childCancel.status).toBe(409);
+
+    for (const product of [first, second]) {
+      const stored = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: product.id } });
+      expect(stored.reservedStock).toBe(before.get(product.id)!.reserved + 1);
+      expect(stored.stock).toBe(before.get(product.id)!.stock);
+    }
+
+    const repeated = await createOrder(
+      mechanic,
+      {
+        items: [
+          { sellerProductId: first.id, quantity: 1 },
+          { sellerProductId: second.id, quantity: 1 },
+        ],
+        deliveryAddressId: addressId,
+      },
+      { 'Idempotency-Key': key },
+    );
+    expect(repeated.status).toBe(201);
+    expect(repeated.body.id).toBe(created.body.id);
+    expect(await dataSource.getRepository(Order).count({ where: { parentOrderId: created.body.id } })).toBe(2);
+  }, 90_000);
+
+  it('۳-پ) شکست رزرو یک فروشنده تمام Parent/Child/Movementها و رزروهای قبلی را rollback می‌کند', async () => {
+    const [first, second] = await pickDistinctSellerOffers();
+    const addressId = await defaultAddressId();
+    const key = `t-multi-rollback-${Date.now()}`;
+    const firstBefore = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: first.id } });
+    const secondBefore = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: second.id } });
+
+    // هر خط به تنهایی معتبر است، اما مجموع دو خط تکراری عمداً از موجودی عبور می‌کند؛
+    // بنابراین شکست داخل Transaction و پس از حداقل یک رزرو رخ می‌دهد.
+    const failed = await createOrder(
+      mechanic,
+      {
+        items: [
+          { sellerProductId: first.id, quantity: firstBefore.availableStock },
+          { sellerProductId: first.id, quantity: firstBefore.availableStock },
+          { sellerProductId: second.id, quantity: 1 },
+        ],
+        deliveryAddressId: addressId,
+      },
+      { 'Idempotency-Key': key },
+    );
+    expect(failed.status).toBe(409);
+    expect(failed.body.code).toBe('STOCK_CONFLICT');
+    expect(await dataSource.getRepository(Order).count({ where: { idempotencyKey: key } })).toBe(0);
+    const firstAfter = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: first.id } });
+    const secondAfter = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: second.id } });
+    expect(firstAfter.reservedStock).toBe(firstBefore.reservedStock);
+    expect(secondAfter.reservedStock).toBe(secondBefore.reservedStock);
+  }, 90_000);
+
+  it('۳-ت) انقضای Parent پرداخت‌نشده تمام بسته‌ها را لغو و رزروها را آزاد می‌کند', async () => {
+    const [first, second] = await pickDistinctSellerOffers();
+    const addressId = await defaultAddressId();
+    const before = new Map([first, second].map((product) => [product.id, product.reservedStock]));
+    const created = await createOrder(
+      mechanic,
+      {
+        items: [
+          { sellerProductId: first.id, quantity: 1 },
+          { sellerProductId: second.id, quantity: 1 },
+        ],
+        deliveryAddressId: addressId,
+      },
+      { 'Idempotency-Key': `t-multi-expire-${Date.now()}` },
+    );
+    expect(created.status).toBe(201);
+    const orders = ctx.app.get(OrdersService);
+    expect(await orders.expireOrderIfUnpaid(created.body.id, new Date(Date.now() + 60 * 60_000))).toBe(true);
+    const children = await dataSource.getRepository(Order).find({ where: { parentOrderId: created.body.id } });
+    expect(children).toHaveLength(2);
+    expect(children.every((child) => child.status === 'CANCELLED')).toBe(true);
+    for (const product of [first, second]) {
+      const stored = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: product.id } });
+      expect(stored.reservedStock).toBe(before.get(product.id));
+    }
+  }, 90_000);
+
+  it('۳-ث) یک پرداخت Parent همه بسته‌ها را دقیقاً یک‌بار قطعی و برای هر فروشنده کمیسیون ثبت می‌کند', async () => {
+    const [first, second] = await pickDistinctSellerOffers();
+    const addressId = await defaultAddressId();
+    const created = await createOrder(
+      mechanic,
+      {
+        items: [
+          { sellerProductId: first.id, quantity: 1 },
+          { sellerProductId: second.id, quantity: 1 },
+        ],
+        deliveryAddressId: addressId,
+      },
+      { 'Idempotency-Key': `t-multi-pay-${Date.now()}` },
+    );
+    expect(created.status).toBe(201);
+    const childIds = created.body.packages.map((pkg: { id: string }) => pkg.id) as string[];
+    const before = new Map(
+      (await dataSource.getRepository(SellerProduct).findByIds([first.id, second.id])).map((product) => [product.id, product]),
+    );
+
+    await ctx.http
+      .post('/api/v1/payments')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId: created.body.id })
+      .expect(201);
+    await ctx.http
+      .post('/api/v1/payments/sandbox/confirm')
+      .set('Authorization', `Bearer ${mechanic.token}`)
+      .send({ orderId: created.body.id, decision: 'paid' })
+      .expect(201);
+
+    const parent = await dataSource.getRepository(Order).findOneOrFail({ where: { id: created.body.id } });
+    const children = await dataSource.getRepository(Order).findByIds(childIds);
+    expect(parent.status).toBe('PAID');
+    expect(parent.paymentStatus).toBe('SUCCESS');
+    expect(children).toHaveLength(2);
+    expect(children.every((child) => child.status === 'PAID' && child.paymentId === parent.paymentId)).toBe(true);
+    expect(await dataSource.getRepository(Commission).countBy({ orderId: In(childIds) })).toBe(2);
+    expect(await dataSource.getRepository(Commission).countBy({ orderId: parent.id })).toBe(0);
+
+    for (const productId of [first.id, second.id]) {
+      const after = await dataSource.getRepository(SellerProduct).findOneOrFail({ where: { id: productId } });
+      expect(after.stock).toBe(before.get(productId)!.stock - 1);
+      expect(after.reservedStock).toBe(before.get(productId)!.reservedStock - 1);
+    }
+  }, 120_000);
 
   it('۴) پرداخت آزمایشی سفارش را PAID می‌کند و کارمزد پلتفرم ثبت می‌شود', async () => {
     const offer = await pickOffer(1);
@@ -382,7 +569,38 @@ describe('چرخه سفارش و منطق مالی (e2e)', () => {
       .expect(201);
     expect(refundRequest.body.status).toBe('REQUESTED');
 
-    // خارج از پنجره زمانی
+    await ctx.http
+      .post(`/api/v1/admin/payments/refunds/${refundRequest.body.id}/approve`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ note: 'تأیید آزمون' })
+      .expect(201);
+    const partial = await ctx.http
+      .post(`/api/v1/admin/payments/refunds/${refundRequest.body.id}/execute`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .set('Idempotency-Key', `t-refund-partial-${Date.now()}`)
+      .send({ amount: Math.max(1, Math.floor(refundRequest.body.amount / 2)) });
+    expect(partial.status).toBe(409);
+    expect(partial.body.code).toBe('VALIDATION_FAILED');
+
+    const executeKey = `t-refund-full-${Date.now()}`;
+    const full = await ctx.http
+      .post(`/api/v1/admin/payments/refunds/${refundRequest.body.id}/execute`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .set('Idempotency-Key', executeKey)
+      .send({ amount: refundRequest.body.amount })
+      .expect(201);
+    expect(full.body.status).toBe('DONE');
+    const repeated = await ctx.http
+      .post(`/api/v1/admin/payments/refunds/${refundRequest.body.id}/execute`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .set('Idempotency-Key', executeKey)
+      .send({ amount: refundRequest.body.amount })
+      .expect(201);
+    expect(repeated.body.id).toBe(full.body.id);
+    expect((await dataSource.getRepository(Order).findOneOrFail({ where: { id: orderId } })).status).toBe('REFUNDED');
+    expect((await dataSource.getRepository(Commission).findOneOrFail({ where: { orderId } })).status).toBe('reversed');
+
+    // خارج از پنجره زمانی / سفارش نهایی‌شده
     await dataSource.getRepository(Order).update({ id: orderId }, { deliveredAt: new Date(Date.now() - 30 * 86_400_000) });
     const late = await ctx.http
       .post('/api/v1/payments/refunds')

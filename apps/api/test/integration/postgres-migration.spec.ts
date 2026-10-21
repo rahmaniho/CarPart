@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DataType, newDb } from 'pg-mem';
 import { InitialPostgresSchema1761011200000 } from '../../src/database/migrations/1761011200000-InitialPostgresSchema';
+import { MultiSellerOrderHierarchy1792540800000 } from '../../src/database/migrations/1792540800000-MultiSellerOrderHierarchy';
 
 /**
  * این آزمون PostgreSQL واقعی نیست؛ parser/constraintهای PostgreSQL را با pg-mem بررسی می‌کند.
@@ -24,14 +25,17 @@ describe('مهاجرت baseline پایگاه PostgreSQL', () => {
       type: 'postgres',
       database: 'carpart_test',
       entities: [],
-      migrations: [InitialPostgresSchema1761011200000],
+      migrations: [InitialPostgresSchema1761011200000, MultiSellerOrderHierarchy1792540800000],
       migrationsTableName: 'schema_migrations',
     });
 
     await dataSource.initialize();
     try {
       const applied = await dataSource.runMigrations({ transaction: 'all' });
-      expect((applied as Array<{ name: string }>).map((item) => item.name)).toContain('InitialPostgresSchema1761011200000');
+      expect((applied as Array<{ name: string }>).map((item) => item.name)).toEqual([
+        'InitialPostgresSchema1761011200000',
+        'MultiSellerOrderHierarchy1792540800000',
+      ]);
 
       const tables = (await dataSource.query(
         `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`,
@@ -43,6 +47,24 @@ describe('مهاجرت baseline پایگاه PostgreSQL', () => {
 
       const pending = await dataSource.showMigrations();
       expect(pending).toBe(false);
+
+      // pg-mem does not update information_schema.is_nullable after ALTER COLUMN,
+      // so exercise the shape directly instead of asserting stale catalog data.
+      const aggregateId = randomUUID();
+      await dataSource.query(
+        `INSERT INTO "orders" ("id", "code", "userId", "sellerId", "branchId", "orderKind", "version")
+         VALUES ($1, 'ORD-MULTI-MIGRATION', $2, NULL, NULL, 'parent', 1)`,
+        [aggregateId, randomUUID()],
+      );
+      const aggregate = (await dataSource.query(
+        `SELECT "orderKind", "sellerId", "branchId" FROM "orders" WHERE "id" = $1`,
+        [aggregateId],
+      )) as Array<{ orderKind: string; sellerId: string | null; branchId: string | null }>;
+      expect(aggregate).toEqual([{ orderKind: 'parent', sellerId: null, branchId: null }]);
+      await dataSource.query(`DELETE FROM "orders" WHERE "id" = $1`, [aggregateId]);
+
+      await dataSource.undoLastMigration({ transaction: 'all' });
+      await expect(dataSource.query(`SELECT "orderKind" FROM "orders"`)).rejects.toThrow();
 
       await dataSource.undoLastMigration({ transaction: 'all' });
       const ordersAfterRollback = (await dataSource.query(

@@ -1,17 +1,21 @@
-import { Column, Entity, Index, VersionColumn } from 'typeorm';
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne, OneToMany, VersionColumn } from 'typeorm';
 import { DATE_COLUMN_TYPE } from '../../../database/column-types';
 import type { OrderStatus, PaymentStatus } from '@carpart/contract';
 import { BaseEntity, moneyTransformer } from '../../../database/base.entity';
 import type { RequestDeliverySnapshot, RequestVehicleSnapshot } from '../../requests/entities/part-request.entity';
 
 /**
- * سفارش.
- *
- * محدودیت نسخه جاری (مستند): هر سفارش فقط از یک فروشگاه تأمین و با یک مأموریت ارسال تحویل می‌شود.
- * ستون parentOrderId برای ساختار آینده «سفارش اصلی + سفارش فروشگاهی فرعی» رزرو شده است
- * تا بدون شکستن داده‌های موجود، خرید چندفروشگاهی اضافه شود.
+ * سفارش. سفارش‌های `parent` تجمیع مالی مشتری هستند و فروشنده/شعبه ندارند؛
+ * هر بسته‌ی `child` مرز مستقل موجودی، کمیسیون، وضعیت و ارسال یک فروشنده است.
+ * سفارش‌های قدیمی و خریدهای تک‌فروشنده‌ای با نوع `single` سازگار می‌مانند.
  */
 @Entity('orders')
+@Check(
+  'CHK_orders_kind_shape',
+  `("orderKind" = 'parent' AND "sellerId" IS NULL AND "branchId" IS NULL AND "parentOrderId" IS NULL)
+   OR ("orderKind" = 'child' AND "sellerId" IS NOT NULL AND "branchId" IS NOT NULL AND "parentOrderId" IS NOT NULL)
+   OR ("orderKind" = 'single' AND "sellerId" IS NOT NULL AND "branchId" IS NOT NULL AND "parentOrderId" IS NULL)`,
+)
 @Index(['userId', 'createdAt'])
 @Index(['sellerId', 'status'])
 @Index(['branchId', 'status'])
@@ -29,12 +33,16 @@ export class Order extends BaseEntity {
   workshopId!: string | null;
 
   @Index()
-  @Column({ type: 'uuid' })
-  sellerId!: string;
+  @Column({ type: 'uuid', nullable: true })
+  sellerId!: string | null;
 
   @Index()
-  @Column({ type: 'uuid' })
-  branchId!: string;
+  @Column({ type: 'uuid', nullable: true })
+  branchId!: string | null;
+
+  @Index()
+  @Column({ type: 'varchar', length: 16, default: 'single' })
+  orderKind!: 'single' | 'parent' | 'child';
 
   @Index()
   @Column({ length: 32, default: 'DRAFT' })
@@ -46,8 +54,16 @@ export class Order extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   quoteId!: string | null;
 
+  @Index()
   @Column({ type: 'uuid', nullable: true })
   parentOrderId!: string | null;
+
+  @ManyToOne(() => Order, (order) => order.childOrders, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'parentOrderId', foreignKeyConstraintName: 'FK_orders_parent_order' })
+  parentOrder?: Order | null;
+
+  @OneToMany(() => Order, (order) => order.parentOrder)
+  childOrders?: Order[];
 
   /** منبع سفارش: خرید مستقیم از کاتالوگ یا انتخاب پیشنهاد */
   @Column({ length: 16, default: 'direct' })

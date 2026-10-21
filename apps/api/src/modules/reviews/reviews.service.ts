@@ -45,6 +45,9 @@ export class ReviewsService {
 
     let targetId: string;
     if (dto.targetType === 'seller') {
+      if (!order.sellerId) {
+        throw new AppException('بازخورد فروشنده باید برای بستهٔ فروشنده ثبت شود.', ErrorCodes.VALIDATION_FAILED, { statusCode: 409 });
+      }
       targetId = order.sellerId;
     } else {
       const delivery = await this.deliveries.findOne({ where: { orderId: order.id } });

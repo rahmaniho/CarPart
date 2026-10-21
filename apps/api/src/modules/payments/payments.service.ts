@@ -114,6 +114,11 @@ export class PaymentsService {
   async createForOrder(userId: string, dto: CreatePaymentDto, idempotencyKey?: string | null): Promise<PaymentInitiation> {
     const order = await this.orders.loadOrder(dto.orderId);
     this.orders.assertReadAccess(order, userId, null);
+    if (order.orderKind === 'child') {
+      throw new AppException('پرداخت فقط برای سفارش تجمیعی انجام می‌شود، نه بستهٔ فروشنده.', ErrorCodes.VALIDATION_FAILED, {
+        statusCode: 409,
+      });
+    }
 
     if (order.paymentStatus === 'SUCCESS' || order.paidAt) {
       throw new AppException('این سفارش پیش‌تر پرداخت شده است.', ErrorCodes.PAYMENT_ALREADY_PROCESSED, { statusCode: 409 });

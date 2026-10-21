@@ -94,7 +94,9 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, Transition<OrderStatus>[]> =
     { to: 'COMPLETED', actors: ['admin'], fa: 'بستن اختلاف به نفع فروشنده', requiresReason: true },
     { to: 'CANCELLED', actors: ['admin'], fa: 'لغو و بازپرداخت', requiresReason: true, guard: 'startRefund' },
   ],
-  CANCELLED: [],
+  CANCELLED: [
+    { to: 'REFUNDED', actors: ['admin'], fa: 'ثبت بازپرداخت سفارش لغوشده', guard: 'refundApproved' },
+  ],
   REFUNDED: [],
 };
 

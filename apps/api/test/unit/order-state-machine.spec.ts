@@ -215,8 +215,10 @@ describe('ماشین وضعیت سفارش', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('وضعیت‌های پایانی هیچ انتقال خروجی ندارند', () => {
-    expect(ORDER_TRANSITIONS.CANCELLED).toHaveLength(0);
+  it('سفارش لغوشده فقط پس از تأیید بازپرداخت مالی به REFUNDED می‌رود و REFUNDED نهایی است', () => {
+    expect(ORDER_TRANSITIONS.CANCELLED).toEqual([
+      expect.objectContaining({ to: 'REFUNDED', actors: ['admin'], guard: 'refundApproved' }),
+    ]);
     expect(ORDER_TRANSITIONS.REFUNDED).toHaveLength(0);
   });
 });
