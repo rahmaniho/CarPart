@@ -250,6 +250,42 @@ export default function HomePage(): JSX.Element {
           ))}
         </div>
 
+        <article id="courier-journey" className="landing-courier-story" aria-labelledby="courier-story-title">
+          <div className="landing-courier-story__heading">
+            <div>
+              <p className="landing-eyebrow">برای پیک کارپارت</p>
+              <h3 id="courier-story-title">از تحویل گرفتن در لوازم یدکی تا رساندن به تعمیرگاه</h3>
+            </div>
+            <p>مأموریت مرحله‌به‌مرحله ثبت می‌شود؛ پیک بسته را از فروشنده تحویل می‌گیرد، ایمن بارگیری می‌کند و با ثبت وضعیت به مکانیک یا مشتری می‌رساند.</p>
+          </div>
+
+          <div className="landing-courier-story__flow">
+            <figure>
+              <div className="landing-courier-story__image">
+                <img src={`${import.meta.env.BASE_URL}landing/courier-pickup.webp`} width="1200" height="900" loading="lazy" alt="پیک کارپارت هنگام دریافت و بارگیری بسته قطعه از فروشگاه لوازم یدکی" />
+                <span>مرحله ۰۱</span>
+              </div>
+              <figcaption><b>دریافت و بارگیری امن</b><p>تحویل بسته از فروشنده و قرار دادن آن در باکس حمل، با ثبت شروع مأموریت.</p></figcaption>
+            </figure>
+
+            <div className="landing-courier-story__connector" aria-hidden="true"><span>←</span><small>مسیر قابل پیگیری</small></div>
+
+            <figure>
+              <div className="landing-courier-story__image">
+                <img src={`${import.meta.env.BASE_URL}landing/courier-delivery.webp`} width="1200" height="900" loading="lazy" alt="پیک کارپارت هنگام تحویل بسته قطعه به مکانیک در تعمیرگاه" />
+                <span>مرحله ۰۲</span>
+              </div>
+              <figcaption><b>تحویل به مکانیک یا مشتری</b><p>رساندن قطعه به مقصد و ثبت تحویل امن در پایان مسیر؛ بدون ادعای زمان تضمینی.</p></figcaption>
+            </figure>
+          </div>
+
+          <div className="landing-courier-story__facts">
+            <span>✓ مشاهدهٔ اطلاعات مأموریت پیش از پذیرش</span>
+            <span>✓ ثبت وضعیت دریافت، حرکت و تحویل</span>
+            <span>✓ تأیید تحویل با کد یکبارمصرف</span>
+          </div>
+        </article>
+
         <p className="landing-benefit-note">میزان صرفه‌جویی یا افزایش فروش به موجودی، قیمت‌گذاری، شهر، کیفیت پاسخ‌گویی و شرایط هر کسب‌وکار وابسته است؛ کارپارت عدد یا سود تضمینی اعلام نمی‌کند.</p>
       </section>
 
