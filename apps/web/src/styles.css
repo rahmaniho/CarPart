@@ -115,10 +115,10 @@ html { scroll-behavior: smooth; }
 .landing-benefit--buyer { --benefit-accent:#0891b2; --benefit-soft:#cffafe; }
 .landing-benefit--seller { --benefit-accent:#d97706; --benefit-soft:#fef3c7; }
 .landing-benefit--mechanic { --benefit-accent:#2563eb; --benefit-soft:#dbeafe; }
-.landing-benefit__visual { position:relative; min-height:25rem; display:flex; align-items:center; justify-content:center; border-radius:1.6rem; background:radial-gradient(circle at 50% 42%,var(--benefit-soft),#f8fafc 65%); isolation:isolate; }
-.landing-benefit__halo { position:absolute; width:70%; aspect-ratio:1; border-radius:50%; background:var(--benefit-accent); opacity:.1; filter:blur(35px); }
-.landing-benefit__visual>img { position:relative; z-index:1; width:min(78%,20rem); aspect-ratio:1; object-fit:contain; border-radius:25%; filter:drop-shadow(0 22px 30px rgb(15 23 42 / .2)); transition:transform .35s ease; }
-.landing-benefit:hover .landing-benefit__visual>img { transform:translateY(-5px) scale(1.02); }
+.landing-benefit__visual { position:relative; min-height:25rem; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:1.6rem; background:var(--benefit-soft); isolation:isolate; }
+.landing-benefit__halo { position:absolute; z-index:1; inset:0; background:linear-gradient(to top,rgb(2 6 23 / .28),transparent 48%); pointer-events:none; }
+.landing-benefit__visual>img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform .45s ease; }
+.landing-benefit:hover .landing-benefit__visual>img { transform:scale(1.025); }
 .landing-benefit__caption { position:absolute; z-index:2; right:1rem; bottom:1rem; left:1rem; display:flex; align-items:center; gap:.7rem; border:1px solid rgb(255 255 255 / .8); border-radius:1rem; background:rgb(255 255 255 / .88); padding:.7rem .8rem; box-shadow:0 15px 35px rgb(15 23 42 / .12); backdrop-filter:blur(14px); }
 .landing-benefit__caption>span { display:flex; width:2rem; height:2rem; flex:none; align-items:center; justify-content:center; border-radius:.7rem; background:var(--benefit-accent); color:white; font-size:.75rem; font-weight:900; }
 .landing-benefit__caption b,.landing-benefit__caption small { display:block; }
