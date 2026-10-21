@@ -10,6 +10,7 @@
 - SEO فارسی، Open Graph، favicon و ساختار معنایی/دسترس‌پذیر
 - Lazy loading تمام Routeهای وب؛ جداسازی نمودارها و پنل‌ها از Bundle اولیهٔ لندینگ
 - اصلاح قطعی نگاشت لوگوی فروشنده و پیک در Android، Splash و PWA
+- انتشار خودکار لندینگ روی GitHub Pages با Base Path پروژه، fallback مسیرهای SPA و حالت معرفی بدون API
 
 ## [1.2.1] — ۱۴۰۵/۰۷/۲۹
 

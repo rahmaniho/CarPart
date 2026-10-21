@@ -9,6 +9,7 @@ import type { SessionUser } from '@carpart/api-client';
 
 const login = vi.fn();
 vi.mock('../src/lib/api', () => ({
+  isStaticLanding: false,
   api: { auth: { login: (...args: unknown[]) => login(...args), logout: vi.fn() } },
   apiTokens: { getAccess: () => null, setAccess: vi.fn(), clear: vi.fn() },
 }));

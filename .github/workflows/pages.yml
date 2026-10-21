@@ -1,0 +1,81 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/api-client/**'
+      - 'packages/contract/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/api-client/**'
+      - 'packages/contract/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-pages:
+    name: ساخت لندینگ GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: نصب وابستگی‌ها
+        run: npm ci --no-audit --no-fund
+      - name: ساخت بسته‌های مشترک
+        run: |
+          npm run build:contract
+          npm run build -w @carpart/api-client
+      - name: تست وب
+        run: npm run test -w @carpart/web
+      - name: ساخت نسخه GitHub Pages
+        env:
+          VITE_BASE_PATH: /CarPart/
+          VITE_STATIC_LANDING: 'true'
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: npm run build -w @carpart/web
+      - name: آماده‌سازی SPA و غیرفعال‌سازی Jekyll
+        run: |
+          cp apps/web/dist/index.html apps/web/dist/404.html
+          touch apps/web/dist/.nojekyll
+      - name: بارگذاری خروجی Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy-pages:
+    name: انتشار لندینگ
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: پیکربندی GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: انتشار در GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

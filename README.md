@@ -58,6 +58,7 @@ python3 scripts/smoke_e2e.py          # آزمون دود روی سرور در �
 ## استقرار
 
 - Docker: `docker-compose.yml` ریشه + تنظیمات `deploy/` (راهنما: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
+- لندینگ GitHub Pages: [docs/GITHUB_PAGES.md](docs/GITHUB_PAGES.md)
 - اندروید: [apps/mobile/ANDROID.md](apps/mobile/ANDROID.md)
 
 ## مستندات
