@@ -37,18 +37,18 @@ export class TokenService {
   ) {}
 
   async issue(user: User, meta: SessionMeta = {}): Promise<IssuedTokens> {
+    // Generate the unique value before INSERT. A shared temporary value such as
+    // "pending" violates the unique index when different users log in concurrently
+    // on PostgreSQL, and creates an avoidable two-write exposure window.
+    const refreshToken = randomToken(48);
     const session = this.users.sessionRepo.create({
       userId: user.id,
-      refreshTokenHash: 'pending',
+      refreshTokenHash: hashToken(refreshToken),
       ip: meta.ip ?? null,
       deviceInfo: meta.deviceInfo ?? null,
       expiresAt: new Date(Date.now() + this.config.auth.refreshTtlDays * 86_400_000),
     });
     const saved = await this.users.sessionRepo.save(session);
-
-    const refreshToken = randomToken(48);
-    saved.refreshTokenHash = hashToken(refreshToken);
-    await this.users.sessionRepo.save(saved);
 
     const accessToken = await this.signAccess(user, saved.id);
     return {
