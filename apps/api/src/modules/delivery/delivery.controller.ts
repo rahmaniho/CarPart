@@ -7,7 +7,6 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Audit } from '../../common/decorators/audit.decorator';
 import { AccountStatusGuard } from '../../common/guards/account-status.guard';
 import type { RequestUser } from '../../common/types/auth';
-import { CouriersService } from '../couriers/couriers.service';
 import { DeliveryService } from './delivery.service';
 import { AcceptMissionDto, DeliverDto, FailAttemptDto, PickupDto, RejectMissionDto } from './dto/delivery.dto';
 
@@ -87,10 +86,7 @@ export class CourierDeliveriesController {
 @ApiBearerAuth()
 @Controller()
 export class DeliveryTrackingController {
-  constructor(
-    private readonly delivery: DeliveryService,
-    private readonly couriers: CouriersService,
-  ) {}
+  constructor(private readonly delivery: DeliveryService) {}
 
   @Get('orders/:orderId/tracking')
   @ApiOperation({ summary: 'نمای ردیابی سفارش (داده محدود برای حریم خصوصی)' })
@@ -99,12 +95,10 @@ export class DeliveryTrackingController {
   }
 
   @Get('orders/:orderId/tracking/location')
-  @RequirePermissions('courier:location:read')
-  @ApiOperation({ summary: 'نمونه‌های موقعیت پیک در چارچوب همان مأموریت' })
+  @ApiOperation({ summary: 'آخرین موقعیت مجاز پیک برای مالک سفارش، فروشنده همان سفارش یا مدیر' })
   async location(@CurrentUser() user: RequestUser, @Param('orderId', ParseUUIDPipe) orderId: string) {
-    const mission = await this.delivery.forOrder(orderId);
-    if (!mission) return { deliveryId: null, locations: [] };
-    return this.couriers.locationsFor(mission.id, user.profileId ?? '', user.roles);
+    const tracking = await this.delivery.tracking(orderId, user);
+    return { deliveryId: tracking.deliveryId || null, location: tracking.location };
   }
 
   @Get('seller/deliveries/:orderId')

@@ -1,8 +1,11 @@
 import type { Http } from '../http';
 import type {
   AddressRow,
+  CourierLocationInput,
+  CourierLocationUpdate,
   CourierProfile,
   DeliveryMission,
+  DeliveryTracking,
   NotificationRow,
   PageResult,
   VehicleRow,
@@ -23,8 +26,8 @@ export interface CouriersApi {
   me(): Promise<CourierProfile>;
   update(input: Record<string, unknown>): Promise<CourierProfile>;
   dashboard(): Promise<Record<string, unknown>>;
-  setAvailability(isOnline: boolean): Promise<CourierProfile>;
-  sendLocation(lat: number, lng: number): Promise<{ ok: boolean }>;
+  setAvailability(isOnline: boolean): Promise<{ availability: 'online' | 'offline' }>;
+  sendLocation(input: CourierLocationInput): Promise<CourierLocationUpdate>;
 }
 
 export interface DeliveryApi {
@@ -37,7 +40,7 @@ export interface DeliveryApi {
   transit(id: string): Promise<DeliveryMission>;
   deliver(id: string, otp: string): Promise<DeliveryMission>;
   fail(id: string, reason: string): Promise<DeliveryMission>;
-  orderTracking(orderId: string): Promise<Record<string, unknown>>;
+  orderTracking(orderId: string): Promise<DeliveryTracking>;
 }
 
 export interface NotificationsApi {
@@ -68,11 +71,8 @@ export function couriersApi(http: Http): CouriersApi {
     me: () => http.get<CourierProfile>('/couriers/me'),
     update: (input) => http.put<CourierProfile>('/couriers/me', input),
     dashboard: () => http.get<Record<string, unknown>>('/couriers/me/dashboard'),
-    setAvailability: (isOnline) => http.post<CourierProfile>('/couriers/me/availability', { isOnline }),
-    sendLocation: async (lat, lng) => {
-      await http.post('/couriers/me/location', { lat, lng });
-      return { ok: true };
-    },
+    setAvailability: (isOnline) => http.post<{ availability: 'online' | 'offline' }>('/couriers/me/availability', { availability: isOnline ? 'online' : 'offline' }),
+    sendLocation: (input) => http.post<CourierLocationUpdate>('/couriers/me/location', input),
   };
 }
 
@@ -87,7 +87,7 @@ export function deliveryApi(http: Http): DeliveryApi {
     transit: (id) => http.post<DeliveryMission>(`/courier/deliveries/${id}/transit`, {}),
     deliver: (id, otp) => http.post<DeliveryMission>(`/courier/deliveries/${id}/deliver`, { otp }),
     fail: (id, reason) => http.post<DeliveryMission>(`/courier/deliveries/${id}/fail`, { reason }),
-    orderTracking: (orderId) => http.get<Record<string, unknown>>(`/orders/${orderId}/tracking`),
+    orderTracking: (orderId) => http.get<DeliveryTracking>(`/orders/${orderId}/tracking`),
   };
 }
 

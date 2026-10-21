@@ -6,6 +6,7 @@ import {
   DELIVERY_TRANSITIONS,
   findTransition,
   haversineKm,
+  metersBetween,
   type Actor,
   type DeliveryStatus,
 } from '@carpart/contract';
@@ -46,7 +47,20 @@ export interface TrackingView {
   deliveryOtp: string | null;
   pickupCode: string | null;
   events: Array<{ at: string; fa: string; status: DeliveryStatus | null }>;
-  location: { lat: number; lng: number; recordedAt: string } | null;
+  location: {
+    lat: number;
+    lng: number;
+    accuracyM: number | null;
+    speedKmh: number | null;
+    heading: number | null;
+    recordedAt: string;
+    ageSeconds: number;
+    isFresh: boolean;
+    distanceToPickupM: number | null;
+    distanceToDropoffM: number | null;
+  } | null;
+  sellerArrival: { detected: boolean; at: string | null };
+  refreshAfterSeconds: number;
   notice: string;
 }
 
@@ -605,6 +619,8 @@ export class DeliveryService {
         pickupCode: null,
         events: [],
         location: null,
+        sellerArrival: { detected: false, at: null },
+        refreshAfterSeconds: 15,
         notice: 'پس از پرداخت و آماده‌سازی سفارش، مأموریت ارسال ساخته می‌شود.',
       };
     }
@@ -614,6 +630,15 @@ export class DeliveryService {
     const events = await this.events.find({ where: { deliveryId: delivery.id }, order: { createdAt: 'ASC' } });
     const latestLocation = courierProfile
       ? await this.locations.findOne({ where: { courierId: courierProfile.id, deliveryId: delivery.id }, order: { recordedAt: 'DESC' } })
+      : null;
+    const freshSeconds = await this.settings.getNumber('courier.location.fresh_seconds', 45);
+    const locationAgeSeconds = latestLocation ? Math.max(0, Math.floor((Date.now() - latestLocation.recordedAt.getTime()) / 1000)) : null;
+    const currentPoint = latestLocation ? { lat: latestLocation.lat, lng: latestLocation.lng } : null;
+    const pickupPoint = delivery.pickupPoint.lat != null && delivery.pickupPoint.lng != null
+      ? { lat: delivery.pickupPoint.lat, lng: delivery.pickupPoint.lng }
+      : null;
+    const dropoffPoint = delivery.dropoffPoint.lat != null && delivery.dropoffPoint.lng != null
+      ? { lat: delivery.dropoffPoint.lat, lng: delivery.dropoffPoint.lng }
       : null;
 
     const key = this.config.auth.encryptionKey;
@@ -660,7 +685,25 @@ export class DeliveryService {
         fa: event.faDescription,
         status: event.status,
       })),
-      location: latestLocation ? { lat: latestLocation.lat, lng: latestLocation.lng, recordedAt: latestLocation.recordedAt.toISOString() } : null,
+      location: latestLocation && currentPoint
+        ? {
+            lat: latestLocation.lat,
+            lng: latestLocation.lng,
+            accuracyM: latestLocation.accuracyM,
+            speedKmh: latestLocation.speedKmh,
+            heading: latestLocation.heading,
+            recordedAt: latestLocation.recordedAt.toISOString(),
+            ageSeconds: locationAgeSeconds ?? 0,
+            isFresh: (locationAgeSeconds ?? Number.POSITIVE_INFINITY) <= freshSeconds,
+            distanceToPickupM: pickupPoint ? Math.round(metersBetween(currentPoint, pickupPoint)) : null,
+            distanceToDropoffM: dropoffPoint ? Math.round(metersBetween(currentPoint, dropoffPoint)) : null,
+          }
+        : null,
+      sellerArrival: {
+        detected: delivery.arrivedAtSellerAt !== null,
+        at: delivery.arrivedAtSellerAt?.toISOString() ?? null,
+      },
+      refreshAfterSeconds: 15,
       notice:
         delivery.status === 'PENDING_ASSIGNMENT'
           ? 'در حال یافتن نزدیک‌ترین پیک واجد شرایط هستیم؛ زمان تحویل قطعی نیست.'

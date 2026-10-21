@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError } from '@carpart/api-client';
 import { api } from '../../lib/api';
-import { openInMaps } from '../../lib/native';
+import { openInMaps, watchPosition } from '../../lib/native';
 import { dateFa, formatToman, toFaDigits } from '../../lib/format';
 import { AppShell } from '../../components/AppShell';
 import { ErrorBox, Field, Section, Spinner, StatusChip } from '../../components/ui';
@@ -19,6 +19,11 @@ export default function MissionDetailPage(): JSX.Element {
   const [pickupCode, setPickupCode] = useState('');
   const [deliveryOtp, setDeliveryOtp] = useState('');
   const [failReason, setFailReason] = useState('');
+  const [locationStatus, setLocationStatus] = useState<{ active: boolean; lastAt: string | null; message: string | null }>({
+    active: false,
+    lastAt: null,
+    message: null,
+  });
 
   const detail = useQuery({ queryKey: ['mission', id], queryFn: () => api.delivery.detail(id!), enabled: Boolean(id) });
 
@@ -35,6 +40,59 @@ export default function MissionDetailPage(): JSX.Element {
   }
 
   const mission = detail.data;
+  const shouldShareLocation = Boolean(mission && ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERY_ATTEMPTED'].includes(mission.status));
+
+  useEffect(() => {
+    if (!mission || !shouldShareLocation) {
+      setLocationStatus({ active: false, lastAt: null, message: null });
+      return;
+    }
+    let stop: (() => void) | undefined;
+    let sending = false;
+    let cancelled = false;
+    setLocationStatus((current) => ({ ...current, active: true, message: null }));
+
+    void watchPosition(
+      (position) => {
+        if (sending || cancelled) return;
+        sending = true;
+        void api.couriers
+          .sendLocation({
+            lat: position.lat,
+            lng: position.lng,
+            accuracyM: position.accuracy ?? undefined,
+            speedKmh: position.speedKmh ?? undefined,
+            heading: position.heading ?? undefined,
+            capturedAt: position.capturedAt,
+            deliveryId: mission.id,
+          })
+          .then((result) => {
+            if (cancelled) return;
+            setLocationStatus({
+              active: true,
+              lastAt: result.recordedAt,
+              message: result.sellerArrivalDetected ? 'رسیدن شما به فروشگاه ثبت شد و فروشنده آگاه شد.' : null,
+            });
+          })
+          .catch(() => {
+            if (!cancelled) setLocationStatus((current) => ({ ...current, message: 'ارسال موقعیت ناموفق بود؛ اینترنت و GPS را بررسی کنید.' }));
+          })
+          .finally(() => {
+            sending = false;
+          });
+      },
+      (message) => setLocationStatus((current) => ({ ...current, message })),
+    ).then((cleanup) => {
+      if (cancelled) cleanup();
+      else stop = cleanup;
+    });
+
+    return () => {
+      cancelled = true;
+      stop?.();
+      setLocationStatus({ active: false, lastAt: null, message: null });
+    };
+  }, [mission?.id, mission?.status, shouldShareLocation]);
 
   return (
     <AppShell title={`مأموریت ${mission?.code ?? ''}`} tabs={COURIER_TABS}>
@@ -69,6 +127,20 @@ export default function MissionDetailPage(): JSX.Element {
             <p className="text-[11px] text-muted">
               مسافت: {mission.distanceKm ? `${toFaDigits(mission.distanceKm.toFixed(1))} کیلومتر` : 'تخمینی'} · ثبت {dateFa(mission.createdAt)}
             </p>
+          </div>
+
+          <div className={`cp-card border ${locationStatus.active ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'} text-xs leading-6`}>
+            <div className="flex items-center justify-between gap-2">
+              <b className={locationStatus.active ? 'text-emerald-800' : 'text-muted'}>
+                {locationStatus.active ? '● اشتراک‌گذاری GPS مأموریت فعال است' : 'اشتراک‌گذاری GPS متوقف است'}
+              </b>
+              {locationStatus.lastAt ? <span className="text-[10px] text-muted">آخرین ارسال: {dateFa(locationStatus.lastAt)}</span> : null}
+            </div>
+            <p className="mt-1 text-muted">
+              موقعیت فقط برای خریدار و فروشنده همین سفارش نمایش داده می‌شود و پس از پایان یا لغو مأموریت متوقف خواهد شد.
+            </p>
+            {locationStatus.message ? <p className="mt-1 font-bold text-amber-800">{locationStatus.message}</p> : null}
+            {locationStatus.active ? <p className="mt-1 text-[10px] text-muted">برای ردیابی پیوسته، این صفحه و GPS گوشی را فعال نگه دارید.</p> : null}
           </div>
 
           <Section title="اقدام‌ها">

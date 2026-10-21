@@ -141,6 +141,9 @@ export const DEFAULT_SETTINGS: DefaultSetting[] = [
   { key: 'courier.search_radius_km', group: 'delivery', valueType: 'number', value: 15, faLabel: 'شعاع جست‌وجوی پیک (کیلومتر)', constraints: { min: 1, max: 100 } },
   { key: 'courier.max_concurrent_deliveries', group: 'delivery', valueType: 'number', value: 2, faLabel: 'حداکثر مأموریت هم‌زمان هر پیک', constraints: { min: 1, max: 10 } },
   { key: 'courier.location.retention_hours', group: 'delivery', valueType: 'number', value: 24, faLabel: 'نگهداری نمونه موقعیت پیک (ساعت)', description: 'برای رعایت حریم خصوصی، سوابق قدیمی‌تر پاکسازی می‌شوند.', constraints: { min: 1, max: 720 } },
+  { key: 'courier.location.arrival_radius_m', group: 'delivery', valueType: 'number', value: 300, faLabel: 'شعاع تشخیص رسیدن پیک به فروشگاه (متر)', description: 'با ورود GPS معتبر پیک به این شعاع، فروشنده یک‌بار برای آماده‌سازی بسته آگاه می‌شود.', unit: 'meter', constraints: { min: 50, max: 2000 } },
+  { key: 'courier.location.max_accuracy_m', group: 'delivery', valueType: 'number', value: 150, faLabel: 'حداکثر خطای GPS برای تشخیص رسیدن (متر)', description: 'نمونه‌های کم‌دقت ذخیره می‌شوند اما اعلان رسیدن ایجاد نمی‌کنند.', unit: 'meter', constraints: { min: 20, max: 2000 } },
+  { key: 'courier.location.fresh_seconds', group: 'delivery', valueType: 'number', value: 45, faLabel: 'حداکثر عمر موقعیت زنده (ثانیه)', description: 'پس از این مدت، موقعیت در رابط به‌عنوان قدیمی نمایش داده می‌شود.', unit: 'second', constraints: { min: 15, max: 600 } },
 
   // --- موتور رتبه‌بندی ---
   {

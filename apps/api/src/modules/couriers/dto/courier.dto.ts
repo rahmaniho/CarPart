@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Length, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsISO8601, IsNumber, IsOptional, IsString, IsUUID, Length, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class UpsertCourierDto {
   @IsOptional()
@@ -95,10 +95,13 @@ export class UpdateLocationDto {
   @Max(360)
   heading?: number;
 
+  @IsUUID('4')
+  deliveryId!: string;
+
+  /** زمان ثبت توسط GPS دستگاه؛ برای رد نمونه‌های بازپخش‌شده استفاده می‌شود. */
   @IsOptional()
-  @IsString()
-  @MaxLength(36)
-  deliveryId?: string;
+  @IsISO8601()
+  capturedAt?: string;
 }
 
 export class CourierPayoutInfoDto {
