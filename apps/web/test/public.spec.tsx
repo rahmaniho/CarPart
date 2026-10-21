@@ -49,6 +49,17 @@ describe('صفحات عمومی', () => {
     expect(screen.getByText('برای مکانیک و خریدار')).toBeTruthy();
     expect(screen.getByText('برای فروشنده و تأمین‌کننده')).toBeTruthy();
     expect(screen.getByText('برای پیک')).toBeTruthy();
+    expect(screen.getByText(/خرید قطعه از حدس‌زدن/)).toBeTruthy();
+    expect(screen.getByText(/تقاضای واقعی را منظم‌تر ببینید/)).toBeTruthy();
+    expect(screen.getByText(/تمرکز بیشتر روی تعمیر خودرو/)).toBeTruthy();
+    expect(screen.getByText(/کارپارت عدد یا سود تضمینی اعلام نمی‌کند/)).toBeTruthy();
+    expect(screen.getByRole('img', { name: /خریدار در حال بررسی قطعه/ }).getAttribute('src')).toBe('/landing/buyer-real.webp');
+    expect(screen.getByRole('img', { name: /تأمین‌کننده در انبار قطعات/ }).getAttribute('src')).toBe('/landing/supplier-real.webp');
+    expect(screen.getByRole('img', { name: 'مکانیک در تعمیرگاه هنگام بررسی قطعه تأمین‌شده با کارپارت' }).getAttribute('src')).toBe('/landing/mechanic-real.webp');
+    expect(screen.getByRole('img', { name: /دریافت و بارگیری بسته قطعه/ }).getAttribute('src')).toBe('/landing/courier-pickup.webp');
+    expect(screen.getByRole('img', { name: /تحویل بسته قطعه به مکانیک/ }).getAttribute('src')).toBe('/landing/courier-delivery.webp');
+    expect(screen.getByText('دریافت و بارگیری امن')).toBeTruthy();
+    expect(screen.getByText('تحویل به مکانیک یا مشتری')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'لوگوی برای فروشنده و تأمین‌کننده کارپارت' }).getAttribute('src')).toBe('/branding/seller.webp');
     expect(screen.getByRole('link', { name: /دریافت نسخه Android/ }).getAttribute('href')).toBe('https://github.com/rahmaniho/CarPart/releases/latest');
   });
