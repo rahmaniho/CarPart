@@ -102,7 +102,7 @@ export class AdminService {
       this.products
         .createQueryBuilder('sp')
         .select('COUNT(*)', 'total')
-        .addSelect('SUM(CASE WHEN sp.isActive = 1 THEN 1 ELSE 0 END)', 'active')
+        .addSelect('SUM(CASE WHEN sp.isActive THEN 1 ELSE 0 END)', 'active')
         .addSelect('SUM(CASE WHEN sp.stock - sp.reservedStock <= 0 THEN 1 ELSE 0 END)', 'outOfStock')
         .where('sp.isActive = :active', { active: true })
         .getRawOne<{ total: string; active: string | null; outOfStock: string | null }>(),
